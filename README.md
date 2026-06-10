@@ -2,7 +2,23 @@
 
 > **Turn JIRA tickets into production-ready code in seconds, safely.**
 
-`ticket2code` is a lightweight, zero-dependency automation framework that bridges the gap between JIRA tickets and your IDE. Using a guided, stage-by-stage AI workflow, it analyzes requirements, scans your codebase, drafts an implementation plan, and writes clean, policy-compliant code—**all through a single slash command while keeping you in complete control.**
+---
+
+## 🚀 Quick Start (Install in 5 Seconds)
+
+To bootstrap `ticket2code` inside any target project, open your terminal at the root of your project and run:
+
+### macOS / Linux / Git Bash (Recommended)
+```bash
+git clone --depth 1 https://github.com/tadev999/ticket2code.git /tmp/ticket2code && /tmp/ticket2code/bin/setup.sh . && rm -rf /tmp/ticket2code
+```
+
+### Windows (PowerShell)
+```powershell
+git clone --depth 1 https://github.com/tadev999/ticket2code.git $env:TEMP\ticket2code; powershell -ExecutionPolicy Bypass -File "$env:TEMP\ticket2code\bin\setup.ps1" .; Remove-Item -Recurse -Force $env:TEMP\ticket2code
+```
+
+*🎉 **Done!** You're now ready to use `/ticket` in your IDE chat. (Optional: Configure credentials/settings in [Quick Start Setup Guide](./ticket2code/ticket/SETUP.md))*
 
 ---
 
@@ -29,22 +45,6 @@ flowchart TD
     E -->|Yes| F[Stage 4: Generate Code]
     F --> G[Stage 5: Style, Test & Log validation]
     G --> H[Stage 6: Final Review & suggested git commit]
-```
-
----
-
-## 🚀 Quick Start (5-Second One-Liner)
-
-To bootstrap `ticket2code` inside any target project, open your terminal at the root of your project and run:
-
-### macOS / Linux / Git Bash (Recommended)
-```bash
-git clone --depth 1 https://github.com/tadev999/ticket2code.git /tmp/ticket2code && /tmp/ticket2code/bin/setup.sh . && rm -rf /tmp/ticket2code
-```
-
-### Windows (PowerShell)
-```powershell
-git clone --depth 1 https://github.com/tadev999/ticket2code.git $env:TEMP\ticket2code; powershell -ExecutionPolicy Bypass -File "$env:TEMP\ticket2code\bin\setup.ps1" .; Remove-Item -Recurse -Force $env:TEMP\ticket2code
 ```
 
 ---
