@@ -73,5 +73,37 @@ JIRA_URL=your_jira_base_url
 # 6. Verify and warn about missing rule files in target docs/ directory
 $TargetDocsDir = Join-Path $TargetDir "docs"
 if (!(Test-Path $TargetDocsDir)) {
-    Write-Host "[!] Warning: Thu muc 'docs/' chua ton tai trong du an dich cua ban." -ForegroundColor Yellow
-    Write-Host "[->] De agent hoat dong chinh xac nhat, ban nen tao thu muc 'docs/'
+    Write-Host "[!] Warning: Thu muc 'docs' chua ton tai trong du an dich cua ban." -ForegroundColor Yellow
+    Write-Host "[->] De agent hoat dong chinh xac nhat, ban nen tao thu muc 'docs' o thu muc goc"
+    Write-Host "    va bo sung cac file quy chuan nhu: coding_style.md, logging_policy.md, test_rules.md, review_guideline.md."
+} else {
+    $CommonRules = @("coding_style.md", "logging_policy.md", "test_rules.md", "review_guideline.md")
+    $MissingRules = @()
+    foreach ($rule in $CommonRules) {
+        $rulePath = Join-Path $TargetDocsDir $rule
+        if (!(Test-Path $rulePath)) {
+            $MissingRules += $rule
+        }
+    }
+    if ($MissingRules.Count -gt 0) {
+        Write-Host "[!] Warning: Du an cua ban thieu mot so file quy chuan trong thu muc 'docs':" -ForegroundColor Yellow
+        foreach ($rule in $MissingRules) {
+            Write-Host "    - $rule"
+        }
+        Write-Host "[->] Hay bo sung cac file nay de cung cap ngu canh tot nhat cho agent khi chay /ticket."
+    }
+}
+
+# 7. Add .env.local to target's .gitignore if it exists and doesn't contain it
+$Gitignore = Join-Path $TargetDir ".gitignore"
+if (Test-Path $Gitignore) {
+    $gitignoreContent = Get-Content $Gitignore
+    if ($gitignoreContent -notcontains ".env.local") {
+        Add-Content -Path $Gitignore -Value "`n# ticket2code local environment variables`n.env.local"
+        Write-Host "[+] Added .env.local to target .gitignore"
+    }
+}
+
+Write-Host "[+] Setup completed successfully!" -ForegroundColor Green
+Write-Host "[*] You can now use the /ticket command in Copilot Chat within the target project."
+Write-Host "[->] Remember to fill in the credentials in: $EnvFile"
