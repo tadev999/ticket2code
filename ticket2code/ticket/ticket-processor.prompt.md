@@ -171,11 +171,79 @@ Blocking items (prevent ticket completion):
 
 ---
 
+## Post-Generation Code Cleanup (Stage 9.5)
+
+**CRITICAL:** Before proceeding to code evaluation, perform systematic cleanup to remove dead code and orphaned references.
+
+### Dead Code Removal Checklist
+When removing logic paths (e.g., event handlers, conditional branches, routing logic):
+
+1. **Event/Listener Cleanup** (applies to all languages with event systems)
+   - [ ] Identify all signal emissions, event listeners, or subscriber registrations tied to removed logic
+   - [ ] Search workspace for all sites where removed event is emitted/triggered
+   - [ ] Search workspace for all sites where removed event is subscribed/listened to
+   - [ ] Remove all event emit/signal call sites
+   - [ ] Remove all event subscription/listener registration blocks
+   - [ ] Remove unused event definition declarations
+   - **Examples:**
+     - Swift: `.send()` calls and `.sink()` subscriptions to removed publishers
+     - JavaScript/TypeScript: `emit()` calls and `.on()` listener registrations
+     - Python: direct callback invocations and listener subscriptions
+     - Java: observer pattern registrations and event handler calls
+
+2. **Dead Code Function Detection**
+   - [ ] Identify functions/methods that only appear in removed code paths
+   - [ ] Verify function is NOT called from any other location
+   - [ ] Remove dead code functions if invocation count = 0
+   - **Examples:**
+     - Function only checking a condition that was removed upstream
+     - Helper method only used by removed feature flag branch
+     - Validator only invoked from deleted router method
+
+3. **Orphaned Variable/Parameter Removal**
+   - [ ] Identify variables/parameters passed to removed method/function calls
+   - [ ] Verify variable is NOT used elsewhere in codebase
+   - [ ] Remove unused event/listener definitions for variables with zero subscribers
+   - [ ] Remove unused listener/subscription blocks that only handle removed logic
+   - **Examples:**
+     - Event variable only passed to removed router call → remove
+     - Callback parameter only used in deleted feature branch → remove
+     - State variable only updated in removed event handler → remove
+
+4. **Verification**
+   - [ ] Run compiler/type checker on all modified files — zero errors required
+   - [ ] Run linter/style check — confirm no new violations introduced
+   - [ ] Final search pass: verify no orphaned references remain in codebase
+
+**Estimated time:** 10-15 minutes per significant refactor
+
+---
+
+## Test Execution Decision Gate (Stage 10.5)
+
+Before running build/test commands, the agent must explicitly notify DEV that execution may take a long time.
+
+Required interaction (same language as DEV):
+- Notify: build/test can take significant time in this repository.
+- Ask: "Do you want me to run build/tests now, or will you run them later yourself?"
+
+Allowed choices:
+- **Run now**
+- **I will run later**
+- **Skip for now**
+
+Report requirement:
+- If tests are not run by the agent, Section 3 must explicitly state: test execution deferred/skipped by DEV.
+
+---
+
 ## Validation checklist (Stage 11)
 
 Before closing the workflow, verify:
 - [ ] Coding style and naming conventions followed
 - [ ] Logging policy applied — no sensitive data in logs
 - [ ] Test cases added or updated for changed behavior
+- [ ] Test execution decision gate completed (run now / deferred / skipped)
 - [ ] Review pattern checklist completed
 - [ ] All blocking AC items resolved or documented
+- [ ] Post-generation code cleanup completed (dead code + orphaned references removed)

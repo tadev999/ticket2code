@@ -7,7 +7,7 @@ For first-time setup, see [SETUP.md](SETUP.md). For a quick overview, see [READM
 
 ## System overview
 
-The `/ticket` command is a **12-stage pipeline** that takes a JIRA ticket ID as input and produces:
+The `/ticket` command is a **12-stage pipeline with intermediate checkpoints (9.5, 10.5)** that takes a JIRA ticket ID as input and produces:
 1. A saved analysis report (pre-generate)
 2. Implementation code
 3. A post-generate AC evaluation appended to the same report
@@ -27,8 +27,10 @@ flowchart TD
     S6 -->|Cancel| STOP[Stop]
     S7[Stage 7: Generate code] --> S8
     S8[Stage 8: Decompose ACs into atomic items] --> S9
-    S9[Stage 9: Evaluate code vs AC matrix] --> S10
-    S10[Stage 10: Append evaluation to report] --> S11
+    S9[Stage 9: Evaluate code vs AC matrix] --> S95
+    S95[Stage 9.5: Post-gen code cleanup<br/>Remove dead code & orphans] --> S10
+    S10[Stage 10: Append evaluation to report] --> S105
+    S105[Stage 10.5: Test execution decision gate<br/>Run now or defer by DEV] --> S11
     S11[Stage 11: Validate against project rules] --> S12
     S12[Stage 12: Output commit summary]
 ```
@@ -48,7 +50,9 @@ flowchart TD
 | 7 | Generate code | Changed/created source files | |
 | 8 | Decompose ACs | Atomic AC items (5-pass decomposition) | |
 | 9 | Evaluate code | AC matrix (Met/Partially Met/Not Met/Unclear) | |
+| **9.5** | **Post-gen code cleanup** | **Dead code + orphaned refs removed** | |
 | 10 | Append evaluation | Sections 2.1–2.3 + Section 3 added to report file | |
+| **10.5** | **Test execution decision gate** | **DEV chooses: run now / run later / skip for now** | ⚠️ |
 | 11 | Validate | Style, logging, test, review pattern compliance | |
 | 12 | Output commit summary | Commit-ready summary and message | |
 

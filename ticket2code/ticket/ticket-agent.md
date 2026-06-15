@@ -55,12 +55,41 @@ Each atomic AC must satisfy: **one trigger + one condition value + one expected 
 For every atomic AC item, assess: **Met / Partially Met / Not Met / Unclear**.  
 Use the evaluation template in `ticket-processor.prompt.md`.
 
+### Stage 9.5 — Post-generate code cleanup
+**Critical step to remove dead code and orphaned references.**  
+See **Post-Generation Code Cleanup** section in `ticket-processor.prompt.md` for detailed checklist.
+
+When removing logic paths (conditional branches, event handlers, feature flags, routes):
+1. Identify all signals/events/listeners tied to removed logic
+2. Remove all emit/trigger calls to unused events
+3. Remove all listener/subscription registration blocks for removed events
+4. Remove unused event/listener definitions
+5. Identify and remove dead code functions (0 invocations in workspace)
+6. Identify and remove orphaned variables (used only in removed logic)
+7. Run final compiler/type-checker + linter — zero errors required
+
+**Failure to cleanup introduces technical debt and confuses future maintainers.**
+
 ### Stage 10 — Append evaluation to report
 Re-open the report file from Stage 5 and append:
 - Section 2.1: Detailed per-AC mapping
 - Section 2.2: Coverage summary
 - Section 2.3: Abnormal-case matrix (when ticket has conditional branching by code/state values)
 - Section 3: Final conclusions
+
+### Stage 10.5 — Test execution decision gate
+Before running full build/test commands, explicitly inform DEV that build and test may take significant time.
+
+Required prompt (same language as DEV):
+- Build/test may take a long time on this repository.
+- Ask: "Do you want me to run build/tests now, or will you run them later yourself?"
+
+Allowed DEV choices:
+- **Run now** → agent runs build/tests and reports results.
+- **I will run later** → agent skips running tests and records that test execution is deferred by DEV.
+- **Skip for now** → agent skips running tests and records that validation is pending.
+
+If DEV does not explicitly choose, do not assume. Ask once before proceeding.
 
 ### Stage 11 — Validate
 Verify all changes against:
@@ -69,6 +98,8 @@ Verify all changes against:
 - Test coverage rules
 - Review pattern checklist
 - No sensitive data in logs
+- Post-generation code cleanup completed (all dead code removed, zero orphaned references)
+- Test decision gate completed (run now / deferred by DEV / skipped)
 
 ### Stage 12 — Output commit summary
 Return a commit-ready summary and a suggested commit message.
