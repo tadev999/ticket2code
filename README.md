@@ -52,15 +52,15 @@ Open GitHub Copilot Chat and type:
 
 ```mermaid
 flowchart TD
-    A[/ticket PROJ-1234] --> B[Fetch & Parse ticket]
+    A["/ticket PROJ-1234"] --> B["Fetch + Parse ticket"]
     B --> C[Explore codebase]
     C --> D[Generate analysis report]
-    D --> E[Save report to docs/report/]
+    D --> E["Save report to docs/report/"]
     E --> F{DEV confirmation}
     F -->|Yes| G[Generate code]
-    F -->|Adjust / Add files| D
+    F -->|"Adjust / Add files"| D
     F -->|Cancel| Z[Stop]
-    G --> H[Decompose ACs + Evaluate code]
+    G --> H["Decompose ACs + Evaluate code"]
     H --> I[Append evaluation to report]
     I --> J[Validate against project rules]
     J --> K[Output commit summary]
