@@ -19,9 +19,25 @@ ticket2code/
     ├── ticket-agent.md
     ├── ticket-processor.prompt.md
     ├── env.local.example
-    ├── README.md
     ├── INDEX.md
-    └── SETUP.md
+    ├── SETUP.md
+
+    # Required spec folders
+    ├── agent-specs/
+    │   ├── 01-stages.md
+    │   ├── 02-ac-decomposition.md
+    │   ├── 03-evaluation-rules.md
+    │   ├── 04-project-rules.md
+    │   └── 05-jira-policy.md
+    └── processor-specs/
+        ├── 01-language-and-convention.md
+        ├── 02-section-1-analysis.md
+        ├── 03-section-2-evaluation.md
+        ├── 04-section-3-conclusion.md
+        ├── 05-cleanup-checklist.md
+        ├── 06-decision-gates.md
+        ├── 07-validation-checklist.md
+        └── 08-decision-labels.md
 ```
 
 ---
@@ -66,9 +82,10 @@ your-repo/
         ├── ticket-agent.md
         ├── ticket-processor.prompt.md
         ├── env.local.example
-        ├── README.md
         ├── INDEX.md
-        └── SETUP.md
+        ├── SETUP.md
+        ├── agent-specs/
+        └── processor-specs/
 ```
 
 ---
@@ -119,6 +136,18 @@ Open GitHub Copilot Chat and type:
 ```
 
 Replace `PROJ-1234` with your actual JIRA ticket ID.
+
+## Workflow behavior (important)
+
+- The flow has Stage 1 -> Stage 12 (see `agent-specs/01-stages.md`).
+- Stage 10.5 and Stage 12 are explicit decision gates.
+- If no explicit choice is captured, the workflow must stop and must not assume Yes/No.
+- Test/build commands are allowed only after Stage 10.5 explicit Yes.
+
+## When a run is interrupted
+
+- If you see request errors (for example HTTP 400 invalid_request_body), start a new chat and resume from the latest completed stage.
+- Keep resume context concise (ticket ID, report path, completed stage, pending gate) to reduce payload risk.
 
 ---
 

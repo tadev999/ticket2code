@@ -8,6 +8,14 @@ This index is the canonical navigation file for the modularized /ticket system.
 - Processor entrypoint: ticket2code/ticket/ticket-processor.prompt.md
 - Setup: ticket2code/ticket/SETUP.md
 
+## Current workflow map (Stage 1 -> Stage 12)
+- Source of truth: ticket2code/ticket/agent-specs/01-stages.md
+- Decision gates:
+	- Stage 6: explicit DEV confirmation before code generation
+	- Stage 10.5: explicit test/build decision gate
+	- Stage 12: explicit commit-summary decision gate
+- Important rule: if a gate choice is not explicit, workflow must stop and must not assume Yes/No.
+
 ## Agent specs
 1. ticket2code/ticket/agent-specs/01-stages.md
 2. ticket2code/ticket/agent-specs/02-ac-decomposition.md
