@@ -1,53 +1,129 @@
-# Hướng dẫn cài đặt lần đầu
+# Setup Guide
 
-Mục tiêu: cài xong và chạy được command `/ticket TICKET-XXXXX` ngay.
+Get `/ticket` running in your repository in under 5 minutes.
 
-## 1) Thêm file vào repo
+---
 
-1. Copy file ticket.prompt.md vào thư mục `.github/prompts/`của repo
-2. Copy `ticket2code` folder vào repo
+## Step 1 — Add files to your repository
 
-## 2) Tạo `.env.local`
+Copy the following into your repo:
 
-Tạo `.env.local` ở root repo với nội dung:
+```
+.github/
+└── prompts/
+    └── ticket.prompt.md       ← copy from ticket2code/ticket/ticket.prompt.md
+
+ticket2code/
+└── ticket/
+    ├── ticket.prompt.md
+    ├── ticket-agent.md
+    ├── ticket-processor.prompt.md
+    ├── env.local.example
+    ├── README.md
+    ├── INDEX.md
+    └── SETUP.md
+```
+
+---
+
+## Step 2 — Create `.env.local`
+
+At the **repo root**, create `.env.local` (copy from `ticket2code/ticket/env.local.example`):
 
 ```dotenv
-JIRA_TOKEN=your_token_here
-JIRA_EMAIL=your_atlassian_email@company.com
-JIRA_URL=your_jira_base_url
+JIRA_TOKEN=<your Atlassian API token>
+JIRA_EMAIL=<your Atlassian account email>
+JIRA_URL=<your JIRA base URL>
 ```
 
-## 3) Kiểm tra cấu trúc thư mục
+> **Example `JIRA_URL`:** `https://yourcompany.atlassian.net`
 
-```text
+---
+
+## Step 3 — Get your Atlassian API token
+
+1. Sign in to your Atlassian account at [id.atlassian.com](https://id.atlassian.com).
+2. Go to **Security → API tokens**: https://id.atlassian.com/manage-profile/security/api-tokens
+3. Click **Create API token**, give it a name (e.g., `ticket-command-local`), and click **Create**.
+4. Copy the token immediately — it is only shown once.
+5. Paste it as the value of `JIRA_TOKEN` in `.env.local`.
+
+> If you suspect a token has been compromised, revoke it from the same page and create a new one.
+
+---
+
+## Step 4 — Verify directory structure
+
+```
 your-repo/
-|-- .env.local
-|-- .github/
-|   `-- prompts/
-|       `-- ticket.prompt.md
-`-- ticket2code/
-    `-- ticket/
-        |-- ticket-processor.prompt.md
-        |-- ticket-agent.md
-        |-- ticket.prompt.md
-        |-- env.local.example
-        `-- SETUP.md
+├── .env.local                        ← credentials (never commit this)
+├── .github/
+│   └── prompts/
+│       └── ticket.prompt.md
+└── ticket2code/
+    └── ticket/
+        ├── ticket.prompt.md
+        ├── ticket-agent.md
+        ├── ticket-processor.prompt.md
+        ├── env.local.example
+        ├── README.md
+        ├── INDEX.md
+        └── SETUP.md
 ```
 
-## 4) Điều kiện để chạy ổn định
+---
 
-- Repo cần có rule trong `docs/` cho các nhóm: coding style, code review, logging, test, development policy, bug-pattern/release-bug.
-- Có thể dùng thêm file instruction ở mức repo nếu cần ràng buộc bổ sung.
+## Step 5 — Add project rules (required for best results)
 
-## 5) Cách chạy
+The agent reads rule documents from your `docs/` folder to enforce project-specific conventions.  
+Create these files if they don't exist:
 
-Mở Copilot Chat và chạy:
+| File | Purpose |
+|---|---|
+| `docs/coding_style.md` | Naming conventions, formatting rules |
+| `docs/codeReviewGuideline.md` | Code review criteria |
+| `docs/logging/logging_policy.md` | Logging and error handling rules |
+| `docs/test/test_code_rules.md` | Test naming, coverage requirements |
+| `docs/development_policy.md` | Branching, delivery, prioritization rules |
+| `docs/review_patterns/` | Generalized review checklists from past incidents |
+| `docs/release_bugs/` | Known release bug history |
 
-```text
-/ticket TICKET-XXXXX
+The more complete your `docs/` folder, the more accurate the generated code.
+
+---
+
+## Step 6 — Create the report output directory
+
+```bash
+mkdir -p docs/report
 ```
 
-## 6) Bảo mật
+Report files are saved here as `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md`.
 
-- Không commit `.env.local` thật.
-- Không gửi `JIRA_TOKEN` qua chat/email.
+---
+
+## Step 7 — Add `.env.local` to `.gitignore`
+
+```bash
+echo ".env.local" >> .gitignore
+```
+
+---
+
+## Run
+
+Open GitHub Copilot Chat and type:
+
+```
+/ticket PROJ-1234
+```
+
+Replace `PROJ-1234` with your actual JIRA ticket ID.
+
+---
+
+## Security reminders
+
+- Never commit `.env.local`.
+- Never share `JIRA_TOKEN` via chat, email, or code comments.
+- The agent uses `curl -u` for JIRA requests — your token is never base64-encoded at runtime in a way that triggers security alerts.

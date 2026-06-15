@@ -3,26 +3,33 @@ agent: agent
 description: Process a JIRA ticket into implementation-ready changes
 ---
 
-# /ticket - Process a JIRA ticket
+# /ticket
 
-This prompt is a thin slash-command entry point.
+**Type:** Slash-command entry point  
+**Input:** `/ticket TICKET-ID` (e.g., `/ticket PROJ-1234`)
 
-## Usage
+## What this command does
 
-- Run `/ticket TICKET-XXXXX` for a specific ticket.
+Kicks off a full ticket-to-code workflow:
+1. Fetches the ticket from JIRA
+2. Produces an analysis report and waits for DEV confirmation
+3. Generates code after confirmation
+4. Evaluates the generated code against all acceptance conditions
+5. Appends the evaluation to the same report file
 
-## Required setup
+## Setup required
 
-- Ensure `JIRA_TOKEN`, `JIRA_EMAIL`, and `JIRA_URL` are available in `.env.local` (see `ticket2code/ticket/SETUP.md`).
+Ensure these variables are set in `.env.local` at the repo root:
+```
+JIRA_TOKEN=<your Atlassian API token>
+JIRA_EMAIL=<your Atlassian account email>
+JIRA_URL=<your JIRA base URL>
+```
+See `ticket2code/ticket/SETUP.md` for step-by-step instructions.
 
-## Primary reference
+## Behavior rules
 
-- Follow `ticket2code/ticket/ticket-processor.prompt.md` for full workflow and output format.
-- Follow `ticket2code/ticket/ticket-agent.md` for stage-by-stage behavior.
-
-## Execution reminder
-
-- Parse the ticket id from the command input.
-- Respond in the same language as the user (Vietnamese user input => Vietnamese report output).
-- Fetch from JIRA, analyze impacted modules/files, and present analysis first.
-- Wait for explicit DEV confirmation before generating code.
+- **Stage-by-stage behavior** → `ticket2code/ticket/ticket-agent.md`
+- **Output templates and report schema** → `ticket2code/ticket/ticket-processor.prompt.md`
+- Always respond in the same language as the user's message.
+- Never generate code before explicit DEV confirmation.
