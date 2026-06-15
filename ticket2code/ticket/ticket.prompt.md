@@ -14,7 +14,7 @@ Kicks off a full ticket-to-code workflow:
 1. Fetches the ticket from JIRA
 2. Produces an analysis report and waits for DEV confirmation
 3. Generates code after confirmation
-4. **Cleans up dead code and orphaned references** (NEW)
+4. **Cleans up dead code and orphaned references** with mandatory before/after search evidence
 5. Asks DEV whether to run build/tests now or defer (because execution may take long)
 6. Evaluates the generated code against all acceptance conditions
 7. Appends the evaluation to the same report file
