@@ -1,91 +1,113 @@
-# ⚡ ticket2code
+# ticket2code — `/ticket` command
 
-> **Turn JIRA tickets into production-ready code in seconds, safely.**
+> Turn a JIRA ticket into analysis report + production-ready code, with a mandatory human confirmation gate before any file is touched.
 
 ---
 
-## 🚀 Quick Start (Install in 5 Seconds)
+## Install in one command
 
-To bootstrap `ticket2code` inside any target project, open your terminal at the root of your project and run:
-
-### macOS / Linux / Git Bash (Recommended)
+**macOS / Linux / Git Bash**
 ```bash
 git clone --depth 1 https://github.com/tadev999/ticket2code.git /tmp/ticket2code && /tmp/ticket2code/bin/setup.sh . && rm -rf /tmp/ticket2code
 ```
 
-### Windows (PowerShell)
+**Windows (PowerShell)**
 ```powershell
 git clone --depth 1 https://github.com/tadev999/ticket2code.git $env:TEMP\ticket2code; powershell -ExecutionPolicy Bypass -File "$env:TEMP\ticket2code\bin\setup.ps1" .; Remove-Item -Recurse -Force $env:TEMP\ticket2code
 ```
 
-*🎉 **Done!** You're now ready to use `/ticket` in your IDE chat. (Optional: Configure credentials/settings in [Quick Start Setup Guide](./ticket2code/ticket/SETUP.md))*
+Then configure credentials in `.env.local` — see [Step 2](#2-create-envlocal) below.
 
 ---
 
-## 🔥 Why ticket2code?
+## Quick start (manual)
 
-Modern AI code generation is powerful, but direct generation without context leads to broken code, missing rules, and architecture drift. `ticket2code` solves this by introducing a structured **guided pipeline with a hard developer gate**.
+### 1. Add files to your repository
 
-- 🤖 **Context-Aware Scans**: Automatically maps JIRA requirements to impacted modules, files, and database schemas.
-- 🛡️ **Safe by Design (Hard Gate)**: The AI *never* writes code without your explicit approval. It presents an Implementation & Risk Report first.
-- 📏 **Automatic Rule Guardrails**: Verifies style, logging policies, and test requirements defined in your local `docs/` folder.
-- 📦 **Zero-Config 5-Second Install**: Install, update, or configure in any repository with a single terminal command.
+Copy `ticket.prompt.md` to `.github/prompts/` and copy the `ticket2code/` folder to your repo root.
+
+### 2. Create `.env.local`
+
+At the repo root, create `.env.local`:
+
+```dotenv
+JIRA_TOKEN=<your Atlassian API token>
+JIRA_EMAIL=<your Atlassian account email>
+JIRA_URL=<your JIRA base URL>
+```
+
+See [SETUP.md](SETUP.md) for step-by-step credential instructions.
+
+### 3. Run
+
+Open GitHub Copilot Chat and type:
+
+```
+/ticket PROJ-1234
+```
 
 ---
 
-## ⚙️ How It Works (The Pipeline)
+## How it works
 
 ```mermaid
 flowchart TD
-    A[Developer runs /ticket JIRA-123] --> B[Stage 1-2: Fetch JIRA & Parse AC]
-    B --> C[Stage 3: Scan Codebase & Map APIs]
-    C --> D[Stage 3: Present Analysis & Risk Report]
-    D --> E{Dev Approval Gate}
-    E -->|No / Adjust| B
-    E -->|Yes| F[Stage 4: Generate Code]
-    F --> G[Stage 5: Style, Test & Log validation]
-    G --> H[Stage 6: Final Review & suggested git commit]
+    A[/ticket PROJ-1234] --> B[Fetch & Parse ticket]
+    B --> C[Explore codebase]
+    C --> D[Generate analysis report]
+    D --> E[Save report to docs/report/]
+    E --> F{DEV confirmation}
+    F -->|Yes| G[Generate code]
+    F -->|Adjust / Add files| D
+    F -->|Cancel| Z[Stop]
+    G --> H[Decompose ACs + Evaluate code]
+    H --> I[Append evaluation to report]
+    I --> J[Validate against project rules]
+    J --> K[Output commit summary]
+```
+
+**The gate rule:** The agent never writes code without explicit DEV confirmation.
+
+---
+
+## What you get per ticket
+
+| Artifact | When | Location |
+|---|---|---|
+| Pre-generate analysis report | After DEV confirms | `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md` |
+| Generated code | After confirmation | Files listed in the analysis |
+| Post-generate AC evaluation | After code generation | Appended to the same report file |
+| Coverage summary | After evaluation | Section 2.2 of the report |
+| Commit message | End of workflow | Printed in chat |
+
+---
+
+## File layout
+
+```
+ticket2code/ticket/
+├── README.md                   ← You are here
+├── INDEX.md                    ← Architecture, stages, troubleshooting
+├── SETUP.md                    ← Credential setup guide
+├── env.local.example           ← .env.local template
+├── ticket.prompt.md            ← Slash-command entry point
+├── ticket-agent.md             ← Stage-by-stage behavior + AC decomposition rules
+└── ticket-processor.prompt.md  ← Report schema and output templates
 ```
 
 ---
 
-## 🔄 Updating / Upgrading
+## Requirements
 
-To update the prompt configurations, scripts, and rule verifications to the latest version, **just re-run the installation command above**.
-
-> [!TIP]
-> **Safe Updates**: Re-running the installer is completely safe. It will overwrite system configuration prompts with the latest updates but will **never** overwrite your credentials in `.env.local` or modify your custom rules inside the `docs/` folder.
-
----
-
-## 📦 Project Layout
-
-```text
-ticket2code/
-├── README.md                # General introduction & setup guide
-├── bin/
-│   ├── setup.sh             # Setup script for macOS/Linux/Git Bash
-│   └── setup.ps1            # Setup script for Windows PowerShell
-└── ticket2code/
-    └── ticket/              # /ticket command configuration & prompts
-        ├── INDEX.md         # Detailed workflow & system design
-        ├── SETUP.md         # Manual installation guidelines
-        ├── env.local.example
-        ├── ticket-agent.md  # System rules (System Prompt)
-        ├── ticket-processor.prompt.md # Code logic instructions (Task Prompt)
-        └── ticket.prompt.md # Entrypoint for IDE Chat
-```
+- GitHub Copilot with agent mode enabled
+- JIRA account with API token access
+- Repository `docs/` folder with project rules (coding style, logging, test rules, review guidelines)
+  — see [SETUP.md § Project rules](SETUP.md) for details
 
 ---
 
-## 📖 Key Documentation
+## Security
 
-*   [Quick Start Setup Guide](./ticket2code/ticket/SETUP.md) — Steps to configure `.env.local` and IDE chat.
-*   [Command Workflow & Stage Details](./ticket2code/ticket/INDEX.md) — Technical details of all execution stages.
-
----
-
-## 🔒 Security & Privacy
-
-- **No Data Leaks**: All JIRA API requests run locally on your system using your JIRA credentials.
-- **Credential Protection**: `.env.local` is automatically added to `.gitignore` during setup to ensure you never commit secrets.
+- Never commit `.env.local`. Add it to `.gitignore`.
+- Never share `JIRA_TOKEN` via chat or email.
+- If a token is compromised, revoke it immediately at [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
