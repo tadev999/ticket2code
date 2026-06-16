@@ -52,33 +52,26 @@ Open GitHub Copilot Chat and type:
 
 ```mermaid
 flowchart TD
-    A["/ticket PROJ-1234"] --> B["Fetch + Parse ticket"]
-    B --> C[Explore codebase]
-    C --> D[Generate analysis report]
-    D --> E["Save report to docs/report/"]
-    E --> F{DEV confirmation}
-    F -->|Yes| G[Generate code]
-    F -->|"Adjust / Add files"| D
+    A[Stage 1 Fetch ticket] --> B[Stage 2 Parse ticket content]
+    B --> C[Stage 3 Explore codebase]
+    C --> D[Stage 4 Generate analysis report]
+    D --> E[Stage 5 Save analysis report]
+    E --> F[Stage 6 DEV confirmation gate]
+    F -->|Yes| G[Stage 7 Generate code]
+    F -->|Adjust or Add files| C
     F -->|Cancel| Z[Stop]
-    G --> H["Decompose ACs + Evaluate code"]
-    H --> I[Append evaluation to report]
-    I --> J[Validate against project rules]
-    J --> K[Output commit summary]
+
+    G --> H[Stage 8 Decompose acceptance conditions]
+    H --> I[Stage 9 Evaluate AC matrix]
+    I --> J[Stage 9.5 Post-generate cleanup evidence]
+    J --> K[Stage 10 Append evaluation to report]
+    K --> L[Stage 10.5 Test execution decision gate]
+    L --> M[Stage 11 Validate]
+    M --> N[Stage 12 Commit summary decision gate]
+    N --> O[Finish]
 ```
 
 **The gate rule:** The agent never writes code without explicit DEV confirmation.
-
----
-
-## What you get per ticket
-
-| Artifact | When | Location |
-|---|---|---|
-| Pre-generate analysis report | After DEV confirms | `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md` |
-| Generated code | After confirmation | Files listed in the analysis |
-| Post-generate AC evaluation | After code generation | Appended to the same report file |
-| Coverage summary | After evaluation | Section 2.2 of the report |
-| Commit message | End of workflow | Printed in chat |
 
 ---
 
@@ -86,13 +79,27 @@ flowchart TD
 
 ```
 ticket2code/ticket/
-├── README.md                   ← You are here
 ├── INDEX.md                    ← Architecture, stages, troubleshooting
 ├── SETUP.md                    ← Credential setup guide
 ├── env.local.example           ← .env.local template
 ├── ticket.prompt.md            ← Slash-command entry point
-├── ticket-agent.md             ← Stage-by-stage behavior + AC decomposition rules
-└── ticket-processor.prompt.md  ← Report schema and output templates
+├── ticket-agent.md             ← Stage-by-stage behavior and workflow invariants
+├── ticket-processor.prompt.md  ← Report schema and output templates
+├── agent-specs/
+│   ├── 01-stages.md
+│   ├── 02-ac-decomposition.md
+│   ├── 03-evaluation-rules.md
+│   ├── 04-project-rules.md
+│   └── 05-jira-policy.md
+└── processor-specs/
+    ├── 01-language-and-convention.md
+    ├── 02-section-1-analysis.md
+    ├── 03-section-2-evaluation.md
+    ├── 04-section-3-conclusion.md
+    ├── 05-cleanup-checklist.md
+    ├── 06-decision-gates.md
+    ├── 07-validation-checklist.md
+    └── 08-decision-labels.md
 ```
 
 ---
