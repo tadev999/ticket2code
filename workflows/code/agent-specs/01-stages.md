@@ -15,6 +15,22 @@ Gate rule:
 - Load .env.local to resolve JIRA_TOKEN, JIRA_EMAIL, JIRA_URL.
 - Fetch ticket data from JIRA REST API (see 05-jira-policy.md).
 
+### Stage 1.5 — Detect Figma design link (optional)
+- Search JIRA ticket description and comments for Figma design links (pattern: `https://www.figma.com/design/...`)
+- If Figma link found, present to DEV with options:
+  - `Analyze design` (run Stage 2.5)
+  - `Skip design` (proceed directly to Stage 2)
+- If `--figma LINK` was provided in command input, use it directly and ask DEV for confirmation
+- If no Figma link is detected from ticket/command input, ask DEV:
+  - `No` (continue without Figma and proceed to Stage 2)
+  - `Provide Figma links` (DEV supplies one or more Figma links to be used for Stage 2.5)
+- Record Figma link(s) (if any) for potential Stage 2.5 execution
+
+Gate rule:
+- If Figma link is found, wait for explicit DEV choice before proceeding
+- If no Figma link is found, do not auto-skip; ask DEV explicitly whether to add link(s) first
+- This stage is completely optional; DEV can always skip
+
 ### Stage 2 — Parse ticket content
 Extract and structure:
 - Summary, description, type, priority, status
@@ -38,14 +54,60 @@ Failure handling:
 - If completeness cannot be guaranteed, stop and request additional fetch or DEV clarification.
 - Never proceed to Stage 3 while Stage 2 completeness gate is open.
 
+### Stage 2.5 — Analyze Figma design (optional, conditional on Stage 1.5)
+Run only if:
+- Figma link was detected in Stage 1.5 AND DEV chose `Analyze design`, OR
+- Figma link was provided via `--figma` flag AND DEV confirmed, OR
+- DEV provided one or more Figma links manually in Stage 1.5
+
+Procedure:
+- Verify `FIGMA_TOKEN` is available in environment
+- Use the `figma-design-analysis` skill to analyze design (see .github/skills/figma-design-analysis/SKILL.md)
+- Extract:
+  - Component hierarchy and specifications
+  - Design tokens (colors, typography, spacing, shadows)
+  - Variants and states
+  - Accessibility requirements and constraints
+  - Design documentation strings
+- Generate AC-to-design traceability matrix mapping JIRA AC to Figma components
+- Save design analysis to: `docs/design/<TICKET-ID>_figma_analysis_<YYYYMMDDHHmm>.md`
+
+Output:
+- Structured design specification document
+- Design tokens and component catalog
+- AC-to-design traceability matrix
+- Implementation recommendations based on design intent
+
+Failure handling:
+- If `FIGMA_TOKEN` is missing, stop and ask DEV to either:
+  - Provide `FIGMA_TOKEN` in `.env.local` and retry, OR
+  - Skip design analysis and proceed with JIRA AC only
+- If Figma file cannot be accessed, record reason in report and proceed with JIRA AC only
+- If design analysis fails, record error and proceed with JIRA AC only (design analysis never blocks workflow)
+
+Gate rule:
+- Design analysis is completely optional and never blocks code generation
+- If design analysis fails or is skipped, proceed to Stage 3 with JIRA AC only
+
 ### Stage 3 — Explore codebase
 - Identify affected modules, files, APIs, and services.
 - Cross-reference with project rule documents (see 04-project-rules.md).
 - Identify relevant review patterns and known prior incidents.
+- If Figma design analysis was completed in Stage 2.5, correlate design components with codebase structures
+- Reference design tokens and component specs when identifying files to modify
 
 ### Stage 4 — Generate analysis report
 Build Stage 3 analysis report using templates in ../processor-specs.
-Must include: ticket header, affected modules, APIs, files to modify/create, code fix approach, impact flows, related patterns, and confirmation options.
+Must include: 
+- Ticket header
+- Affected modules, APIs, files to modify/create
+- Code fix approach and impact flows
+- Related patterns and known incidents
+- (If Figma analysis completed) Design specifications section with:
+  - Component hierarchy and specs
+  - Design tokens and accessibility requirements
+  - AC-to-design traceability matrix
+- Confirmation options
 
 ### Stage 5 — Save analysis report
 - Create file: docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md

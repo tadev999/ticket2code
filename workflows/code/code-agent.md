@@ -11,9 +11,11 @@ Read files in this order before execution:
 3. ticket2code/code/agent-specs/02-evaluation-rules.md
 4. ticket2code/code/agent-specs/03-project-rules.md
 5. ticket2code/code/agent-specs/04-jira-policy.md
+6. .github/skills/figma-design-analysis/SKILL.md (if Figma integration is used)
 
 ## Non-negotiable gates
 - Stage 0: Never continue if communication language is not explicitly selected by DEV.
+- Stage 1.5 (new): If Figma link is detected or provided, ask DEV for explicit confirmation to analyze design (optional step).
 - Stage 6: Never generate code before explicit DEV confirmation.
 - Stage 9.5: Cleanup is incomplete unless report contains verification per the `dead-code-cleanup` skill:
   1) removed symbols,
@@ -24,10 +26,13 @@ Read files in this order before execution:
 
 ## Workflow invariants
 - Never skip stage order from Stage 0 to Stage 12.
+- Stage 1.5 (Figma link detection) must run after Stage 1 (fetch) but is optional if no Figma link found or DEV declines.
+- Stage 2.5 (Figma design analysis) must complete before Stage 3 if Figma analysis is approved.
 - Never assume a gate decision when DEV has not explicitly selected an option.
 - Never mark Stage 9.5 complete without all three evidence items.
 - Never generate code outside the DEV-approved file scope from Stage 6.
 - Never execute tests/build in Stage 7, 8, 9, 9.5, or 10.
+- If Figma design analysis runs, merge design specs into Section 1 analysis before Stage 6 confirmation gate.
 
 ## Quick execution map
 - Stages and outputs: see agent-specs/01-stages.md.
@@ -35,6 +40,7 @@ Read files in this order before execution:
 - Evaluation rules: see agent-specs/02-evaluation-rules.md.
 - Rule discovery order: see agent-specs/03-project-rules.md.
 - JIRA security/auth policy: see agent-specs/04-jira-policy.md.
+- Figma design analysis: see .github/skills/figma-design-analysis/SKILL.md (optional, triggered by `--figma` flag or auto-detected from ticket).
 - Dead-code cleanup: see .github/skills/dead-code-cleanup/SKILL.md.
 
 ## Expected behavior
