@@ -8,7 +8,7 @@ Ticket2Code bridges the gap between project management and development by provid
 - Automatically generates code structure from JIRA tickets
 - Maintains consistent project standards across multiple repositories
 - Reduces manual setup time and human error
-- Supports both macOS/Linux and Windows environments
+- Supports both macOS and Windows with one Python installer script
 
 ## Directory Structure
 
@@ -30,11 +30,11 @@ ticket2code/
 
 The safest approach uses a temporary directory and automatically cleans up after installation.
 
-**macOS / Linux:**
+**macOS / Linux (bash):**
 ```bash
 TMP_DIR="$(mktemp -d)" && \
 git clone --depth 1 https://github.com/tadev999/ticket2code.git "$TMP_DIR" && \
-"$TMP_DIR"/installers/install.sh . && \
+python3 "$TMP_DIR"/installers/t2c_installer.py install --target-dir . && \
 rm -rf "$TMP_DIR"
 ```
 
@@ -42,7 +42,7 @@ rm -rf "$TMP_DIR"
 ```powershell
 $tmp = Join-Path $env:TEMP ("ticket2code-" + [guid]::NewGuid().ToString()); `
 git clone --depth 1 https://github.com/tadev999/ticket2code.git $tmp; `
-& (Join-Path $tmp 'installers/install.ps1') -TargetDir (Get-Location).Path; `
+python (Join-Path $tmp 'installers/t2c_installer.py') install --target-dir (Get-Location).Path; `
 Remove-Item -Recurse -Force $tmp
 ```
 
@@ -199,11 +199,7 @@ If you prefer manual setup or encounter issues with automated installation:
 
 1. **Run installer**
    ```bash
-   # macOS / Linux:
-   ./installers/install.sh /absolute/path/to/target-repo
-   
-   # Windows (PowerShell):
-   ./installers/install.ps1 -TargetDir <target-repo-path>
+   python3 ./installers/t2c_installer.py install --target-dir /absolute/path/to/target-repo
    ```
 
 2. **Configure the project**
@@ -213,11 +209,7 @@ If you prefer manual setup or encounter issues with automated installation:
 
 3. **Validate setup**
    ```bash
-   # macOS / Linux:
-   ./installers/doctor.sh /absolute/path/to/target-repo
-   
-   # Windows (PowerShell):
-   ./installers/doctor.ps1 -TargetDir <target-repo-path>
+   python3 ./installers/t2c_installer.py doctor --target-dir /absolute/path/to/target-repo
    ```
 
 ### Upgrade
@@ -225,11 +217,7 @@ If you prefer manual setup or encounter issues with automated installation:
 To update Ticket2Code to the latest version:
 
 ```bash
-# macOS / Linux:
-./installers/upgrade.sh /absolute/path/to/target-repo
-
-# Windows (PowerShell):
-./installers/upgrade.ps1 -TargetDir <target-repo-path>
+python3 ./installers/t2c_installer.py upgrade --target-dir /absolute/path/to/target-repo
 ```
 
 ### Uninstall
@@ -240,11 +228,11 @@ To remove Ticket2Code from your repository:
 # Using one-liner (recommended):
 TMP_DIR="$(mktemp -d)" && \
 git clone --depth 1 https://github.com/tadev999/ticket2code.git "$TMP_DIR" && \
-"$TMP_DIR"/installers/uninstall.sh . && \
+python3 "$TMP_DIR"/installers/t2c_installer.py uninstall --target-dir . && \
 rm -rf "$TMP_DIR"
 
 # Or manually:
-./installers/uninstall.sh /absolute/path/to/target-repo
+python3 ./installers/t2c_installer.py uninstall --target-dir /absolute/path/to/target-repo
 ```
 
 ---
@@ -273,8 +261,10 @@ Comprehensive guides are available in the `docs/` directory:
 
 ### Common Issues
 
-**Installation fails on Windows:**
-- Ensure PowerShell execution policy allows scripts: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+**Installation fails:**
+- Ensure Python 3 is available in PATH.
+- Use `python` instead of `python3` on systems where `python3` is not mapped.
+- On Windows, run commands from PowerShell and pass absolute paths with `--target-dir`.
 
 **Doctor check reports warnings:**
 - Run `doctor` again to see detailed diagnostic output
