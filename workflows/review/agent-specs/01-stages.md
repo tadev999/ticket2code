@@ -21,8 +21,10 @@ Completion gate (mandatory):
 - Report file location or fetch confirmation is recorded.
 - AC list is available for Stage 2.
 
-### Stage 2 — Request commit hash
-- Ask DEV for commit hash in either format: long (40-char) or short (7-12 char).
+### Stage 2 — Request commit hash (BASE commit before code changes)
+- **Context reminder:** Your current code (HEAD) is the latest version with fixes applied. We need the BASE commit (commit BEFORE the changes) to compare against.
+- Ask DEV for the BASE commit hash in either format: long (40-char) or short (7-12 char).
+  - Example: If you are working on TICKET-123 fixes, provide the commit hash from BEFORE you started making changes.
 - Required options at this gate:
 	- Provide commit hash
 	- Cancel
@@ -34,18 +36,21 @@ Gate rule:
 - Do not assume partial hash refers to HEAD or recent commits.
 - If DEV selects Cancel, terminate the run.
 - Never continue to Stage 3 without explicit valid hash input.
+- **Clarification:** The command will run `git diff <BASE-commit>..HEAD` to show all changes from BASE to your current code.
 
 ### Stage 3 — Retrieve commit diff
-- Execute `git diff <commit>..HEAD` to get all changes.
+- Execute `git diff <base-commit>..HEAD` to get all changes.
+  - `<base-commit>` = commit provided by DEV in Stage 2 (the "before" state)
+  - `HEAD` = current code with fixes (the "after" state)
 - Resolve and record metadata for both:
-	- before/base commit (`<commit>` provided by DEV)
-	- after commit (`HEAD`)
+	- BASE commit (`<base-commit>` provided by DEV): starting point before changes
+	- HEAD commit (`HEAD`): current code with all fixes applied
 - Parse and structure the diff: files modified, insertions, deletions, hunks.
 - Identify language/type of each file (Swift, Kotlin, Python, etc.).
 
 Completion gate (mandatory):
 - Diff is successfully retrieved and parsed.
-- Both before/base and after/HEAD commit metadata are available for Section 1.
+- Both BASE and HEAD commit metadata are available for Section 1.
 - File list with change statistics is available.
 
 ### Stage 4 — Analyze code changes
@@ -57,7 +62,7 @@ Completion gate (mandatory):
 ### Stage 5 — Evaluate against AC
 - Decompose AC (from Stage 1 report) into atomic items.
 - For each atomic AC, check implementation in this order:
-	1) diff (`git diff <commit>..HEAD`), then
+	1) diff (`git diff <base-commit>..HEAD`), then
 	2) existing codebase outside diff.
 - Assess: Met / Partially Met / Not Met / Unclear.
 - Document which lines address each AC and identify evidence source: Diff or Codebase.

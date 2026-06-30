@@ -123,16 +123,16 @@ TIMEZONE=[timezone]
 ### Data Setup Script
 ```bash
 # Run database migrations
-./scripts/migrate_test_db.sh
+./scripts/migrate_test_db
 
 # Load test fixtures
-./scripts/load_test_fixtures.sh
+./scripts/load_test_fixtures
 
 # Initialize mock services
-./scripts/init_mock_services.sh
+./scripts/init_mock_services
 
 # Verify setup
-./scripts/verify_setup.sh
+./scripts/verify_setup
 ```
 
 ### Test Fixtures
@@ -236,7 +236,7 @@ assertTrue(capturedEvents[0].subject.contains("[Action] Confirmation"))
 Execute once before running all tests:
 
 ```bash
-#!/bin/bash
+# Use your project standard command runner
 set -e
 
 echo "=== One-time Test Environment Setup ==="
@@ -313,7 +313,7 @@ tearDown() {
 Execute once after all tests:
 
 ```bash
-#!/bin/bash
+# Use your project standard command runner
 
 echo "=== One-time Cleanup ==="
 

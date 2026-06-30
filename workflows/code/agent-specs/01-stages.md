@@ -15,20 +15,21 @@ Gate rule:
 - Load .env.local to resolve JIRA_TOKEN, JIRA_EMAIL, JIRA_URL.
 - Fetch ticket data from JIRA REST API (see 05-jira-policy.md).
 
-### Stage 1.5 — Detect Figma design link (optional)
+### Stage 1.5 — Collect design input source (optional)
 - Search JIRA ticket description and comments for Figma design links (pattern: `https://www.figma.com/design/...`)
 - If Figma link found, present to DEV with options:
   - `Analyze design` (run Stage 2.5)
   - `Skip design` (proceed directly to Stage 2)
 - If `--figma LINK` was provided in command input, use it directly and ask DEV for confirmation
 - If no Figma link is detected from ticket/command input, ask DEV:
-  - `No` (continue without Figma and proceed to Stage 2)
+  - `No` (continue without design analysis and proceed to Stage 2)
   - `Provide Figma links` (DEV supplies one or more Figma links to be used for Stage 2.5)
-- Record Figma link(s) (if any) for potential Stage 2.5 execution
+  - `Provide screenshot folder for OCR` (DEV provides a folder path under `docs/figma_design_analysis/`)
+- Record selected design source (Figma links and/or screenshot folder path) for potential Stage 2.5 execution
 
 Gate rule:
 - If Figma link is found, wait for explicit DEV choice before proceeding
-- If no Figma link is found, do not auto-skip; ask DEV explicitly whether to add link(s) first
+- If no Figma link is found, do not auto-skip; ask DEV explicitly whether to provide links, screenshot folder, or skip
 - This stage is completely optional; DEV can always skip
 
 ### Stage 2 — Parse ticket content
@@ -54,15 +55,18 @@ Failure handling:
 - If completeness cannot be guaranteed, stop and request additional fetch or DEV clarification.
 - Never proceed to Stage 3 while Stage 2 completeness gate is open.
 
-### Stage 2.5 — Analyze Figma design (optional, conditional on Stage 1.5)
+### Stage 2.5 — Analyze design source (optional, conditional on Stage 1.5)
 Run only if:
 - Figma link was detected in Stage 1.5 AND DEV chose `Analyze design`, OR
 - Figma link was provided via `--figma` flag AND DEV confirmed, OR
-- DEV provided one or more Figma links manually in Stage 1.5
+- DEV provided one or more Figma links manually in Stage 1.5, OR
+- DEV provided screenshot folder path for OCR analysis in Stage 1.5
 
 Procedure:
-- Verify `FIGMA_TOKEN` is available in environment
-- Use the `figma-design-analysis` skill to analyze design (see .github/skills/figma-design-analysis/SKILL.md)
+- Choose analysis mode based on Stage 1.5 source:
+  - Direct Figma mode: verify `FIGMA_TOKEN` and use `figma-design-analysis` (see .github/skills/figma-design-analysis/SKILL.md)
+  - Screenshot/image mode (with vision): Use AI model vision analysis (automatic)
+  - Screenshot/image mode (without vision): Use Python+OpenCV analysis via `design-image-ocr-analysis` (see .github/skills/design-image-ocr-analysis/SKILL.md)
 - Extract:
   - Component hierarchy and specifications
   - Design tokens (colors, typography, spacing, shadows)
@@ -70,7 +74,9 @@ Procedure:
   - Accessibility requirements and constraints
   - Design documentation strings
 - Generate AC-to-design traceability matrix mapping JIRA AC to Figma components
-- Save design analysis to: `docs/design/<TICKET-ID>_figma_analysis_<YYYYMMDDHHmm>.md`
+- Save design analysis to:
+  - Direct Figma mode: `docs/design/<TICKET-ID>_figma_analysis_<YYYYMMDDHHmm>.md`
+  - Screenshot/image mode: `docs/design/<TICKET-ID>_image_analysis_<YYYYMMDDHHmm>.md`
 
 Output:
 - Structured design specification document
@@ -79,11 +85,17 @@ Output:
 - Implementation recommendations based on design intent
 
 Failure handling:
-- If `FIGMA_TOKEN` is missing, stop and ask DEV to either:
+- If `FIGMA_TOKEN` is missing in direct Figma mode, stop and ask DEV to either:
   - Provide `FIGMA_TOKEN` in `.env.local` and retry, OR
+  - Switch to screenshot/OCR mode by providing screenshot folder, OR
   - Skip design analysis and proceed with JIRA AC only
 - If Figma file cannot be accessed, record reason in report and proceed with JIRA AC only
+- If screenshot folder is missing/invalid or contains no supported images, ask DEV to correct folder/input before skipping
 - If design analysis fails, record error and proceed with JIRA AC only (design analysis never blocks workflow)
+- If dependency installation is required for analysis tools (for example Python/OpenCV) and installation fails with proxy-like errors (`407`, `proxy`, `tunnel`, SSL cert issues in proxy path):
+  - Stop and request DEV proxy information explicitly before retry
+  - Do not retry silently more than once
+  - If retry still fails, record limitation and ask DEV to choose fallback/manual path
 
 Gate rule:
 - Design analysis is completely optional and never blocks code generation
@@ -201,6 +213,13 @@ Verify all changes against:
 - No sensitive data in logs
 - Cleanup complete (dead code/orphan refs removed)
 - Test decision gate completed
+
+Cross-stage installation/proxy rule:
+- Whenever any stage requires tool/dependency installation and command output indicates proxy restriction (`407`, `proxy connect`, `tunnel connection failed`, `CERTIFICATE_VERIFY_FAILED` under corporate proxy), the agent must:
+  1. Stop current automation
+  2. Ask DEV for proxy settings (`HTTP_PROXY`/`HTTPS_PROXY`, auth requirement, `NO_PROXY`, custom CA)
+  3. Retry once after DEV confirmation
+  4. If still failing, document limitation and ask whether to continue with fallback/manual alternative
 
 ### Stage 12 — Commit summary decision gate
 - For VSCode use vscode_askQuestions.

@@ -243,8 +243,8 @@ Examples:
 Format: `[Component] [State] [Details]`
 
 Examples:
-- `LoadingIndicator displays with message "Processing payment..."`
-- `PayButton state changes to disabled`
+- `LoadingIndicator displays with message "Processing..."`
+- `SubmitButton state changes to disabled`
 - `TransactionRecord created with status completed`
 
 ---

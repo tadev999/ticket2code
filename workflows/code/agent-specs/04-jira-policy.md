@@ -2,7 +2,7 @@
 
 - Use curl -u "$JIRA_EMAIL:$JIRA_TOKEN".
 - Never pipe credentials through runtime base64 encoding.
-- Never invoke pwsh or powershell to fetch ticket data.
+- Never invoke non-curl wrapper commands to fetch ticket data.
 - Fetch must prioritize completeness for Stage 1/2 gates before Stage 3 exploration.
 - Static image attachments (`png`, `jpg`, `jpeg`, `webp`, `gif`) are supported only after downloading the attachment locally for in-session inspection.
 - Video attachments (`mp4`, `mov`, `avi`, `mkv`, `webm`) are not supported for in-session inspection; treat them as explicit limitations.
