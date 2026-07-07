@@ -16,6 +16,7 @@ Read files in this order before execution:
 ## Non-negotiable gates
 - Stage 0: Never continue if communication language is not explicitly selected by DEV.
 - Stage 1.5 (new): If Figma link is detected or provided, ask DEV for explicit confirmation to analyze design (optional step).
+- Stage 5.5: Always ask the supplementary-input question (Excel/CSV, image, `.md`/`.txt`, or typed text) after the report is saved and before Stage 6. Never auto-skip; only DEV may decline by choosing `No, proceed`.
 - Stage 6: Never generate code before explicit DEV confirmation.
 - Stage 9.5: Cleanup is incomplete unless report contains verification per the `dead-code-cleanup` skill:
   1) removed symbols,
@@ -28,6 +29,7 @@ Read files in this order before execution:
 - Never skip stage order from Stage 0 to Stage 12.
 - Stage 1.5 (Figma link detection) must run after Stage 1 (fetch) but is optional if no Figma link found or DEV declines.
 - Stage 2.5 (Figma design analysis) must complete before Stage 3 if Figma analysis is approved.
+- Stage 5.5 (supplementary input) must always be asked after Stage 5 and before Stage 6; "optional" means DEV may decline, not that the agent may skip asking.
 - Never assume a gate decision when DEV has not explicitly selected an option.
 - Never mark Stage 9.5 complete without all three evidence items.
 - Never generate code outside the DEV-approved file scope from Stage 6.
