@@ -40,10 +40,10 @@ rm -rf "$TMP_DIR"
 
 **Windows (PowerShell):**
 ```powershell
-$tmp = Join-Path $env:TEMP ("ticket2code-" + [guid]::NewGuid().ToString()); `
-git clone --depth 1 https://github.com/tadev999/ticket2code.git $tmp; `
-python (Join-Path $tmp 'installers/t2c_installer.py') install --target-dir (Get-Location).Path; `
-Remove-Item -Recurse -Force $tmp
+set TMP_DIR=%TEMP%\ticket2code-tmp
+git clone --depth 1 https://github.com/tadev999/ticket2code.git %TMP_DIR%
+py "%TMP_DIR%\installers\t2c_installer.py" install --target-dir .
+rmdir /s /q %TMP_DIR%
 ```
 
 ---
