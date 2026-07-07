@@ -13,6 +13,7 @@ Read files in this order before execution:
 
 ## Non-negotiable gates
 - Stage 0: Never continue if communication language is not explicitly selected by DEV.
+- Stage 1.5: Always ask the supplementary-input question (Excel/CSV, image, `.md`/`.txt`, or typed text) after the ticket report/AC is resolved and before Stage 2. Never auto-skip; only DEV may decline by choosing `No, proceed`.
 - Stage 2: Never assume existence of report; check explicitly and fetch if needed.
 - Stage 3: Require explicit commit hash input; never infer from branch or recent history.
 - Stage 3: Collect and preserve both before/base and after/HEAD commit metadata per the `git-diff-analysis` skill.
@@ -22,6 +23,7 @@ Read files in this order before execution:
 
 ## Workflow invariants
 - Never skip stage order from Stage 0 to Stage 6.
+- Stage 1.5 (supplementary input) must always be asked after Stage 1 and before Stage 2; "optional" means DEV may decline, not that the agent may skip asking.
 - Never assume DEV intention when commit hash is ambiguous.
 - Never evaluate AC without having full diff context.
 - Never conclude Unclear solely because evidence is absent from diff.

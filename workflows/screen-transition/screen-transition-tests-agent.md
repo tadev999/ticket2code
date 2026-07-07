@@ -17,13 +17,15 @@ Read files in this order before execution:
 - Stage 0: Never continue if communication language is not explicitly selected by DEV.
 - Stage 0.5: Never continue if execution phase is not explicitly selected by DEV (`Pre-Dev` or `Post-Dev`).
 - Stage 4: Never skip transition map analysis before test case generation.
+- Stage 4.2: Always ask the supplementary-input question (Excel/CSV, image, `.md`/`.txt`, or typed text) after the report is saved and before Stage 4.5. Never auto-skip; only DEV may decline by choosing `No, proceed`.
 - Stage 5: Every transition test case must define Start Screen, Trigger, Destination Screen.
 - Stage 6: Environment setup must include all navigation preconditions.
 - Stage 8: Every sequence must include transition assertions and expected destination state.
 - Stage 9: Coverage validation must map AC -> Test Case -> Step.
 
 ## Workflow invariants
-- Never skip stage order from Stage 0 to Stage 9 (including Stage 0.5).
+- Never skip stage order from Stage 0 to Stage 9 (including Stage 0.5 and Stage 4.2).
+- Stage 4.2 (supplementary input) must always be asked after Stage 4 and before Stage 4.5; "optional" means DEV may decline, not that the agent may skip asking.
 - Each test case must contain at least one explicit transition edge (From -> To).
 - Every atomic AC must be mapped to at least one test case and one verifying step.
 - Test sequences must be executable in isolation or in defined order.

@@ -78,6 +78,50 @@ Evidence traceability rule:
 - If image and/or spreadsheet attachments were used, the analysis report must cite them explicitly.
 - Spreadsheet evidence must include `filename + sheet + row/column` for critical requirements and test inputs.
 
+### Stage 4.2 — Supplementary input gate (mandatory to ask, before confirmation)
+Purpose:
+- After the analysis report exists, allow DEV to add extra context before generating test cases.
+- Supported supplement sources: Excel/CSV, image, text file (`.md`, `.txt`), and direct text input typed by DEV.
+- This stage only enriches the report; it never generates test cases.
+
+Procedure:
+- Ask DEV: "Do you want to supplement additional information (Excel, image, .md/.txt file, or typed text) before generating test cases?"
+- For VSCode use vscode_askQuestions.
+- Required options (exact intent):
+	- Provide Excel/CSV
+	- Provide image
+	- Provide text file (.md / .txt)
+	- Type text directly
+	- Provide multiple
+	- No, proceed
+- If Excel/CSV provided:
+	- convert the file(s) with the `excel-to-markdown` skill
+	- store outputs under docs/attachments/<TICKET-ID>/excel/
+	- extract supplementary requirements/test data with `filename + sheet + row/column` references
+- If image provided:
+	- inspect with model vision or the `design-image-ocr-analysis` skill (after confirmation)
+	- extract supplementary UI/behavior details with filename references
+- If text file (`.md`, `.txt`) provided:
+	- read the file content directly
+	- store a copy under docs/attachments/<TICKET-ID>/notes/
+	- extract supplementary requirements/constraints with `filename + line/section` references
+- If DEV types text directly:
+	- capture the text verbatim as a DEV-provided note
+	- extract supplementary requirements/constraints and label the source as `DEV note`
+- If multiple sources are provided, process each source with the rules above.
+- Merge supplementary findings into the existing analysis report:
+	- update the Supplementary information subsection
+	- update affected components, requirements, environment, and AC as needed
+	- re-save the report file at the same path
+
+Gate rule:
+- This gate is mandatory to ASK: always present the supplementary-input question after Stage 4 and before Stage 4.5. "Optional" refers to DEV's freedom to decline, not the agent's freedom to skip.
+- Never auto-skip this stage even when the report looks complete; only DEV may skip it by selecting `No, proceed`.
+- If DEV selects `No, proceed`, continue to Stage 4.5 with the current report unchanged.
+- If supplement is provided, always regenerate and re-present the updated report before Stage 4.5.
+- Never generate test cases from this stage.
+- If DEV does not explicitly choose an option, stop and ask again.
+
 ### Stage 4.5 — Request DEV confirmation (mandatory)
 - Present Stage 4 analysis report and ask DEV to choose exactly one option:
 	- Confirm and generate test cases

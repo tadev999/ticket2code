@@ -21,6 +21,46 @@ Completion gate (mandatory):
 - Report file location or fetch confirmation is recorded.
 - AC list is available for Stage 2.
 
+### Stage 1.5 — Supplementary input gate (mandatory to ask, before diff evaluation)
+Purpose:
+- After the ticket report/AC context is resolved, allow DEV to add extra context before diff analysis and AC evaluation.
+- Supported supplement sources: Excel/CSV, image, text file (`.md`, `.txt`), and direct text input typed by DEV.
+- This stage only enriches requirement context; it never evaluates code or writes the review report.
+
+Procedure:
+- Ask DEV: "Do you want to supplement additional information (Excel, image, .md/.txt file, or typed text) before reviewing?"
+- For VSCode use vscode_askQuestions.
+- Required options (exact intent):
+	- Provide Excel/CSV
+	- Provide image
+	- Provide text file (.md / .txt)
+	- Type text directly
+	- Provide multiple
+	- No, proceed
+- If Excel/CSV provided:
+	- convert the file(s) with the `excel-to-markdown` skill
+	- store outputs under docs/attachments/<TICKET-ID>/excel/
+	- extract supplementary requirements/data with `filename + sheet + row/column` references
+- If image provided:
+	- inspect with model vision or the `design-image-ocr-analysis` skill (after confirmation)
+	- extract supplementary requirement/UI details with filename references
+- If text file (`.md`, `.txt`) provided:
+	- read the file content directly
+	- store a copy under docs/attachments/<TICKET-ID>/notes/
+	- extract supplementary requirements/constraints with `filename + line/section` references
+- If DEV types text directly:
+	- capture the text verbatim as a DEV-provided note
+	- extract supplementary requirements/constraints and label the source as `DEV note`
+- If multiple sources are provided, process each source with the rules above.
+- Carry supplementary findings into Stage 4 analysis and Stage 5 AC evaluation, and cite them in the Stage 6 report.
+
+Gate rule:
+- This gate is mandatory to ASK: always present the supplementary-input question after Stage 1 and before Stage 2. "Optional" refers to DEV's freedom to decline, not the agent's freedom to skip.
+- Never auto-skip this stage; only DEV may skip it by selecting `No, proceed`.
+- If DEV selects `No, proceed`, continue to Stage 2 with the current context unchanged.
+- Never evaluate code or write the review report from this stage.
+- If DEV does not explicitly choose an option, stop and ask again.
+
 ### Stage 2 — Request commit hash (BASE commit before code changes)
 - **Context reminder:** Your current code (HEAD) is the latest version with fixes applied. We need the BASE commit (commit BEFORE the changes) to compare against.
 - Ask DEV for the BASE commit hash in either format: long (40-char) or short (7-12 char).
