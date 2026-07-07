@@ -31,11 +31,12 @@ See `ticket2code/SETUP.md` for step-by-step instructions.
 
 1. **First step:** Ask DEV to select communication language for this run and stop until explicit selection.
 2. Resolve ticket context from existing implementation report; if missing, run Jira requirement analysis using the `jira-pbi-analysis` workflow.
-3. Decompose Acceptance Criteria into atomic items using the `ac-decomposition` skill.
-4. **Remind DEV:** Current code (HEAD) = latest with fixes. Request explicit **BASE commit hash** (commit before changes) for comparison.
-5. Retrieve and analyze `<base-commit>..HEAD` changes using the `git-diff-analysis` skill.
-6. Review those changes against decomposed AC, quality standards, and potential regressions.
-7. Generate findings-first review report with traceable evidence.
+3. Offer a supplementary-input step after ticket context is resolved and before requesting the commit hash (Gate Supplement): ask DEV whether to add extra context via Excel/CSV, image, `.md`/`.txt` file, or typed text; if provided, convert Excel via `excel-to-markdown`, inspect image, read text files/notes, and carry findings into diff analysis, AC evaluation, and the review report.
+4. Decompose Acceptance Criteria into atomic items using the `ac-decomposition` skill.
+5. **Remind DEV:** Current code (HEAD) = latest with fixes. Request explicit **BASE commit hash** (commit before changes) for comparison.
+6. Retrieve and analyze `<base-commit>..HEAD` changes using the `git-diff-analysis` skill.
+7. Review those changes against decomposed AC, quality standards, and potential regressions.
+8. Generate findings-first review report with traceable evidence.
 
 ## Mandatory Interaction Gates
 
@@ -45,6 +46,26 @@ Ask DEV to explicitly select communication language before any other step.
 
 Gate behavior:
 - If language is not explicitly selected, stop and ask again.
+
+### Gate Supplement - Supplementary input (after ticket context, before Gate B)
+
+After ticket report/AC context is resolved, ask DEV whether to add extra context before diff analysis and AC evaluation:
+- Ask DEV: "Do you want to supplement additional information (Excel, image, .md/.txt file, or typed text) before reviewing?"
+- Options: `Provide Excel/CSV` / `Provide image` / `Provide text file (.md/.txt)` / `Type text directly` / `Provide multiple` / `No, proceed`
+
+Handling:
+- `Provide Excel/CSV`: convert with `excel-to-markdown`, store under `docs/attachments/<TICKET-ID>/excel/`, extract supplementary requirements/data with `filename + sheet + row/column` references.
+- `Provide image`: inspect with model vision or `design-image-ocr-analysis`; extract supplementary details with filename references.
+- `Provide text file (.md/.txt)`: read content directly, store a copy under `docs/attachments/<TICKET-ID>/notes/`, extract supplementary requirements/constraints with `filename + line/section` references.
+- `Type text directly`: capture verbatim as a `DEV note` and extract supplementary requirements/constraints.
+- `Provide multiple`: handle each provided source with the rules above.
+- `No, proceed`: continue to Gate B with the current context unchanged.
+
+Gate behavior:
+- This gate is mandatory to ASK: always present the supplementary-input question after ticket context is resolved and before Gate B. Never auto-skip; only DEV may decline via `No, proceed`.
+- Carry supplementary findings into diff analysis, AC evaluation, and the final review report.
+- This gate never evaluates code or writes the review report.
+- If DEV did not explicitly choose an option, stop and ask again.
 
 ### Gate B - Base commit hash confirmation (before diff analysis)
 
