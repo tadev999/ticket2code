@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const http = require('http');
+const tls = require('tls');
 const crypto = require('crypto');
 
 const FIGMA_API_BASE = 'https://api.figma.com/v1';
@@ -34,7 +36,7 @@ function fail(message) {
 }
 
 function showUsage() {
-  process.stdout.write(`Usage:\n  node figma_analyze.js --figma-url <url> [--output <file>] [--no-cache]\n  node figma_analyze.js --file-key <key> --node-id <id> [--output <file>] [--no-cache]\n  node figma_analyze.js --figma-url <url> --export-svg --asset-output <file.svg>\n  node figma_analyze.js --file-key <key> --node-id <id> --export-svg --asset-output <file.svg>\n\nEnvironment:\n  FIGMA_TOKEN is required for direct Figma API analysis.\n  .env.local is loaded automatically when present.\n`);
+  process.stdout.write(`Usage:\n  node figma_analyze.js --figma-url <url> [--output <file>] [--no-cache]\n  node figma_analyze.js --file-key <key> --node-id <id> [--output <file>] [--no-cache]\n  node figma_analyze.js --figma-url <url> --export-svg --asset-output <file.svg>\n  node figma_analyze.js --file-key <key> --node-id <id> --export-svg --asset-output <file.svg>\n\nEnvironment:\n  FIGMA_TOKEN is required for direct Figma API analysis.\n  .env.local is loaded automatically when present.\n  HTTP(S)_PROXY / NO_PROXY are honored via CONNECT tunneling when set.\n`);
 }
 
 function loadDotEnvLocal() {
@@ -180,6 +182,86 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function proxyUrlForTarget(targetUrl) {
+  let host;
+  try {
+    host = new URL(targetUrl).hostname;
+  } catch (error) {
+    return null;
+  }
+  const noProxy = (process.env.NO_PROXY || process.env.no_proxy || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  for (const entry of noProxy) {
+    if (entry === '*') {
+      return null;
+    }
+    const bare = entry.replace(/^\./, '');
+    if (host === bare || host.endsWith(`.${bare}`)) {
+      return null;
+    }
+  }
+  return (
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy ||
+    null
+  );
+}
+
+// Build an https.Agent that tunnels through a corporate proxy via CONNECT
+// when HTTP(S)_PROXY is configured (e.g. loaded from .env.local). Returns
+// undefined when no proxy applies, so the default agent is used.
+function buildProxyAgent(targetUrl) {
+  const proxyRaw = proxyUrlForTarget(targetUrl);
+  if (!proxyRaw) {
+    return undefined;
+  }
+  let proxy;
+  try {
+    proxy = new URL(proxyRaw);
+  } catch (error) {
+    return undefined;
+  }
+  const agent = new https.Agent({ keepAlive: false });
+  agent.createConnection = (options, callback) => {
+    const headers = {};
+    if (proxy.username) {
+      const user = decodeURIComponent(proxy.username);
+      const pass = decodeURIComponent(proxy.password || '');
+      headers['Proxy-Authorization'] =
+        `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
+    }
+    const connectReq = http.request({
+      host: proxy.hostname,
+      port: proxy.port || 80,
+      method: 'CONNECT',
+      path: `${options.host}:${options.port || 443}`,
+      headers,
+    });
+    connectReq.on('connect', (res, socket) => {
+      if (res.statusCode !== 200) {
+        callback(new Error(`Proxy CONNECT failed with status ${res.statusCode}`));
+        return;
+      }
+      const tlsSocket = tls.connect(
+        {
+          socket,
+          servername: options.servername || options.host,
+          rejectUnauthorized: options.rejectUnauthorized !== false,
+        },
+        () => callback(null, tlsSocket),
+      );
+      tlsSocket.on('error', callback);
+    });
+    connectReq.on('error', callback);
+    connectReq.end();
+  };
+  return agent;
+}
+
 function requestText(url, token) {
   return new Promise((resolve, reject) => {
     const headers = {
@@ -192,6 +274,7 @@ function requestText(url, token) {
     const request = https.request(url, {
       method: 'GET',
       headers,
+      agent: buildProxyAgent(url),
     }, (response) => {
       const chunks = [];
       response.on('data', (chunk) => chunks.push(chunk));
@@ -211,7 +294,7 @@ function requestText(url, token) {
 
 function requestBuffer(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (response) => {
+    https.get(url, { agent: buildProxyAgent(url) }, (response) => {
       const chunks = [];
       response.on('data', (chunk) => chunks.push(chunk));
       response.on('end', () => {

@@ -5,14 +5,14 @@ This directory contains the Figma design analysis skill for the Ticket2Code fram
 ## Contents
 
 - `SKILL.md` — Detailed skill documentation and API integration guide
-- `scripts/` — Cross-platform Node.js implementation
-  - `figma_analyze.js` — Node.js implementation for macOS and Windows
+- `scripts/` — Python implementation
+  - `figma_analyze.py` — Python 3 implementation (macOS, Windows, Linux)
 
 ## Quick Start
 
 ### 1. Set up FIGMA_TOKEN
 
-Install Node.js and add the token to `.env.local` at repository root:
+Ensure Python 3.8+ is available and add the token to `.env.local` at repository root:
 ```bash
 FIGMA_TOKEN=<your-figma-personal-access-token>
 ```
@@ -66,16 +66,16 @@ Design analysis is always optional and non-blocking.
 
 ## Manual Script Usage
 
-### Cross-platform Node.js:
+### Python (stdlib only):
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --figma-url "https://www.figma.com/design/FILE_KEY/Title?node-id=12-345" \
   --output docs/design/output.md
 ```
 
 Using file key and node ID directly:
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --file-key FILE_KEY \
   --node-id 12:345 \
   --output docs/design/output.md
@@ -83,7 +83,7 @@ node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
 
 Exporting a node to SVG:
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --figma-url "https://www.figma.com/design/FILE_KEY/Title?node-id=12-345" \
   --export-svg \
   --asset-output docs/assets/figma-link-01.svg

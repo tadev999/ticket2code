@@ -24,10 +24,9 @@ try:
     import cv2
     import numpy as np
     from PIL import Image
-    from skimage import color, exposure
 except ImportError as e:
     print(f"Error: Required libraries not found: {e}")
-    print("Install with: pip install opencv-python numpy pillow scikit-image")
+    print("Install with: pip install opencv-python numpy pillow")
     sys.exit(1)
 
 # Optional: try importing pytesseract for text extraction
@@ -48,6 +47,7 @@ class ImageAnalyzer:
         self.debug = debug
         self.images = []
         self.analysis_results = []
+        self.min_area = 400  # minimum component box area in pixels
         
     def load_images(self) -> List[str]:
         """Load supported image files from folder."""
@@ -65,123 +65,188 @@ class ImageAnalyzer:
         print(f"Found {len(images)} images: {', '.join(images[:3])}{'...' if len(images) > 3 else ''}")
         return images
     
-    def extract_colors(self, image: np.ndarray, num_colors: int = 5) -> List[Dict[str, Any]]:
-        """Extract dominant colors from image."""
-        # Reshape image to 2D array of pixels
-        pixels = image.reshape((-1, 3))
-        pixels = np.float32(pixels)
-        
-        # K-means clustering to find dominant colors
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        _, labels, centers = cv2.kmeans(pixels, num_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        
-        centers = np.uint8(centers)
+    def extract_colors(self, image: np.ndarray, num_colors: int = 5, sample_max_dim: int = 200) -> List[Dict[str, Any]]:
+        """Extract dominant colors via k-means on a downsampled copy (fast + stable)."""
+        if image is None or image.size == 0:
+            return []
+        h, w = image.shape[:2]
+        longest = max(h, w)
+        scale = min(1.0, sample_max_dim / float(longest)) if longest > 0 else 1.0
+        if scale < 1.0:
+            small = cv2.resize(
+                image,
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
+        else:
+            small = image
+
+        pixels = small.reshape((-1, 3)).astype(np.float32)
+        if pixels.shape[0] == 0:
+            return []
+
+        k = int(min(num_colors, pixels.shape[0]))
+        if k < 1:
+            return []
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+        _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+        labels = labels.flatten()
+        counts = np.bincount(labels, minlength=k)
+        total = int(counts.sum()) or 1
+        centers_u8 = np.uint8(centers)
+
         unique_colors = []
-        
-        for color in centers:
-            # Convert BGR to RGB
-            rgb = tuple(reversed(color.tolist()))
-            # Convert to hex
+        for idx in range(k):
+            b, g, r = centers_u8[idx].tolist()  # OpenCV is BGR
+            rgb = (int(r), int(g), int(b))
             hex_color = '#{:02x}{:02x}{:02x}'.format(*rgb)
             unique_colors.append({
                 'hex': hex_color,
                 'rgb': rgb,
-                'frequency': int(np.sum(labels == len(unique_colors)))
+                'frequency': int(counts[idx]),
+                'ratio': round(float(counts[idx]) / total, 4),
             })
-        
-        # Sort by frequency
+
         unique_colors.sort(key=lambda x: x['frequency'], reverse=True)
         return unique_colors[:num_colors]
+
+    @staticmethod
+    def _overlap_ratio(a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]) -> float:
+        """Intersection area over the smaller box area (0..1)."""
+        ax, ay, aw, ah = a
+        bx, by, bw, bh = b
+        ix1, iy1 = max(ax, bx), max(ay, by)
+        ix2, iy2 = min(ax + aw, bx + bw), min(ay + ah, by + bh)
+        iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
+        inter = iw * ih
+        if inter == 0:
+            return 0.0
+        smaller = min(aw * ah, bw * bh) or 1
+        return inter / float(smaller)
     
     def detect_components(self, image: np.ndarray, image_path: str) -> List[Dict[str, Any]]:
-        """Detect component boundaries using edge detection and contours."""
-        # Convert to grayscale
+        """Detect component boundaries using Canny edges + morphology + box merging."""
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        # Apply threshold
-        _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-        
-        # Find contours
-        contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
-        components = []
-        min_area = 100  # Filter small noise
-        
+        gray = cv2.GaussianBlur(gray, (3, 3), 0)
+
+        # Content-adaptive Canny thresholds (robust to light/dark themes)
+        med = float(np.median(gray))
+        lower = int(max(0, 0.66 * med))
+        upper = int(min(255, 1.33 * med))
+        edges = cv2.Canny(gray, lower, upper)
+
+        # Close gaps so edges of a UI element form a single region
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+        closed = cv2.dilate(edges, kernel, iterations=2)
+
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        img_h, img_w = gray.shape[:2]
+        img_area = img_h * img_w
+        min_area = max(self.min_area, int(0.0005 * img_area))
+
+        raw_boxes: List[Tuple[int, int, int, int]] = []
         for cnt in contours:
-            area = cv2.contourArea(cnt)
+            x, y, w, h = cv2.boundingRect(cnt)
+            area = w * h
             if area < min_area:
                 continue
-            
-            x, y, w, h = cv2.boundingRect(cnt)
-            
-            # Extract region for color analysis
-            region = image[y:y+h, x:x+w]
+            if area > 0.98 * img_area:  # skip full-frame background
+                continue
+            raw_boxes.append((int(x), int(y), int(w), int(h)))
+
+        # Merge: keep larger boxes, drop those mostly contained in a kept box
+        raw_boxes.sort(key=lambda b: b[2] * b[3], reverse=True)
+        kept: List[Tuple[int, int, int, int]] = []
+        for box in raw_boxes:
+            if any(self._overlap_ratio(box, k) > 0.85 for k in kept):
+                continue
+            kept.append(box)
+
+        components = []
+        for (x, y, w, h) in kept:
+            region = image[y:y + h, x:x + w]
             colors = self.extract_colors(region, num_colors=1)
-            
             components.append({
                 'position': {'x': int(x), 'y': int(y)},
                 'size': {'width': int(w), 'height': int(h)},
-                'area': int(area),
+                'area': int(w * h),
                 'background_color': colors[0] if colors else None,
-                'confidence': 'medium'  # Heuristic estimate
+                'confidence': 'medium',  # heuristic estimate
             })
-        
-        # Sort by position (top-left to bottom-right)
+
         components.sort(key=lambda c: (c['position']['y'], c['position']['x']))
-        
+
         if self.debug:
-            # Save debug visualization
             debug_img = image.copy()
             for comp in components:
                 x = comp['position']['x']
                 y = comp['position']['y']
                 w = comp['size']['width']
                 h = comp['size']['height']
-                cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            
+                cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             debug_path = Path(self.input_folder) / f"debug_{Path(image_path).name}"
             cv2.imwrite(str(debug_path), debug_img)
             print(f"  Debug visualization saved: {debug_path}")
-        
+
         return components
     
     def analyze_image(self, image_path: str) -> Dict[str, Any]:
         """Analyze single image."""
         full_path = self.input_folder / image_path
-        
+
         print(f"\nAnalyzing: {image_path}")
-        
+
         # Read image
         image = cv2.imread(str(full_path))
         if image is None:
             print(f"  Error: Could not load image")
             return {'error': 'Failed to load image', 'file': image_path}
-        
+
         height, width = image.shape[:2]
         print(f"  Dimensions: {width}x{height}")
-        
+
+        # Infer render scale (@1x/@2x/@3x) and device so specs can be given in points
+        scale_info = self.infer_scale_device(width, height)
+        scale = scale_info['scale']
+        print(f"  Device: {scale_info['device']} (@{scale}x, {scale_info['confidence']} confidence)")
+
         # Extract colors
         colors = self.extract_colors(image)
         print(f"  Dominant colors: {[c['hex'] for c in colors[:3]]}")
-        
+
         # Detect components
         components = self.detect_components(image, image_path)
         print(f"  Components detected: {len(components)}")
-        
+
+        # Layout relations: gaps, alignment groups, spacing grid
+        layout = self.compute_layout_relations(components, scale)
+
         result = {
             'file': image_path,
             'dimensions': {'width': width, 'height': height},
+            'scale': scale,
+            'device': scale_info['device'],
+            'orientation': scale_info['orientation'],
+            'logical_size_pt': {
+                'width': scale_info['logical'][0],
+                'height': scale_info['logical'][1],
+            },
+            'scale_confidence': scale_info['confidence'],
             'colors': colors,
             'components': components,
-            'timestamp': datetime.now().isoformat()
+            'layout': layout,
+            'timestamp': datetime.now().isoformat(),
         }
-        
-        # Optional: extract text
+
+        # Optional: extract text + estimate typography
         if self.extract_text:
             print("  Extracting text regions (pytesseract)...")
             text_regions = self._extract_text_regions(image)
             result['text_regions'] = text_regions
-        
+            result['typography'] = self.estimate_typography(image, text_regions, scale)
+
         return result
     
     def _extract_text_regions(self, image: np.ndarray) -> List[Dict[str, Any]]:
@@ -211,7 +276,180 @@ class ImageAnalyzer:
         except Exception as e:
             print(f"  Warning: Text extraction failed: {e}")
             return []
-    
+
+    # Known logical sizes (points) and native render scale for device inference.
+    KNOWN_DEVICES = [
+        ("iPhone SE / 8 / 7 / 6s", 375, 667, 2),
+        ("iPhone 8 Plus", 414, 736, 3),
+        ("iPhone X / XS / 11 Pro / 13 mini", 375, 812, 3),
+        ("iPhone 12 / 13 / 14", 390, 844, 3),
+        ("iPhone 14 Pro / 15 / 15 Pro", 393, 852, 3),
+        ("iPhone XR / 11", 414, 896, 2),
+        ("iPhone 14 Plus", 428, 926, 3),
+        ("iPhone 14 Pro Max / 15 Pro Max", 430, 932, 3),
+        ("iPad 10.2", 810, 1080, 2),
+        ("iPad Pro 11", 834, 1194, 2),
+        ("iPad Pro 12.9", 1024, 1366, 2),
+        ("Android (baseline mdpi)", 360, 640, 1),
+        ("Android (common xxhdpi)", 360, 800, 3),
+    ]
+
+    def infer_scale_device(self, width: int, height: int) -> Dict[str, Any]:
+        """Best-effort device + render-scale inference from pixel dimensions."""
+        best = None
+        for name, lw, lh, scale in self.KNOWN_DEVICES:
+            for pw, ph in ((lw * scale, lh * scale), (lh * scale, lw * scale)):
+                dw = abs(width - pw) / max(pw, 1)
+                dh = abs(height - ph) / max(ph, 1)
+                score = dw + dh
+                if score < 0.03 and (best is None or score < best['_score']):
+                    if width <= height:
+                        logical = (lw, lh)
+                    else:
+                        logical = (lh, lw)
+                    best = {
+                        'device': name,
+                        'scale': scale,
+                        'orientation': 'portrait' if height >= width else 'landscape',
+                        'logical': logical,
+                        'confidence': 'high',
+                        '_score': score,
+                    }
+        if best:
+            best.pop('_score', None)
+            return best
+
+        # Fallback: guess scale by magnitude of the long side
+        long_side = max(width, height)
+        if long_side >= 2000:
+            scale = 3
+        elif long_side >= 1000:
+            scale = 2
+        else:
+            scale = 1
+        return {
+            'device': 'unknown',
+            'scale': scale,
+            'orientation': 'portrait' if height >= width else 'landscape',
+            'logical': (round(width / scale), round(height / scale)),
+            'confidence': 'low',
+        }
+
+    def compute_layout_relations(self, components: List[Dict[str, Any]], scale: float) -> Dict[str, Any]:
+        """Derive alignment groups, inter-component gaps, and spacing grid (in points)."""
+        rels: Dict[str, Any] = {
+            'alignment_groups': {'left_aligned': [], 'right_aligned': [], 'center_x_aligned': []},
+            'vertical_gaps_pt': [],
+            'horizontal_gaps_pt': [],
+            'spacing_scale': {'base_grid_pt': None, 'grid_fit_ratio_8': 0.0,
+                              'grid_fit_ratio_4': 0.0, 'common_gaps_pt': []},
+        }
+        n = len(components)
+        if n == 0:
+            return rels
+
+        def to_pt(v: float) -> float:
+            return round(v / scale, 1) if scale else float(v)
+
+        widths = [c['size']['width'] for c in components]
+        tol = max(2, int(0.01 * max(widths)))
+
+        def group_by(key_fn):
+            groups: Dict[int, List[int]] = {}
+            for i, c in enumerate(components):
+                key = key_fn(c)
+                placed = False
+                for gk in groups:
+                    if abs(gk - key) <= tol:
+                        groups[gk].append(i)
+                        placed = True
+                        break
+                if not placed:
+                    groups[key] = [i]
+            return [sorted(v) for v in groups.values() if len(v) >= 2]
+
+        rels['alignment_groups']['left_aligned'] = group_by(lambda c: c['position']['x'])
+        rels['alignment_groups']['right_aligned'] = group_by(
+            lambda c: c['position']['x'] + c['size']['width'])
+        rels['alignment_groups']['center_x_aligned'] = group_by(
+            lambda c: c['position']['x'] + c['size']['width'] // 2)
+
+        for i in range(n):
+            a = components[i]
+            ax, aw = a['position']['x'], a['size']['width']
+            ay2 = a['position']['y'] + a['size']['height']
+            ay, ah = a['position']['y'], a['size']['height']
+            for j in range(n):
+                if i == j:
+                    continue
+                b = components[j]
+                bx, bw = b['position']['x'], b['size']['width']
+                by, bh = b['position']['y'], b['size']['height']
+                # Vertical gap: horizontally overlapping, b below a
+                if min(ax + aw, bx + bw) - max(ax, bx) > 0:
+                    gap = by - ay2
+                    if 0 < gap < 400:
+                        rels['vertical_gaps_pt'].append(to_pt(gap))
+                # Horizontal gap: vertically overlapping, b right of a
+                if min(ay + ah, by + bh) - max(ay, by) > 0:
+                    gap = bx - (ax + aw)
+                    if 0 < gap < 400:
+                        rels['horizontal_gaps_pt'].append(to_pt(gap))
+
+        rels['spacing_scale'] = self._infer_spacing_scale(
+            rels['vertical_gaps_pt'] + rels['horizontal_gaps_pt'])
+        return rels
+
+    @staticmethod
+    def _infer_spacing_scale(gaps: List[float]) -> Dict[str, Any]:
+        """Detect whether gaps fit a 4/8pt grid and list the most common gap values."""
+        from collections import Counter
+        rounded = [int(round(g)) for g in gaps if g > 0]
+        if not rounded:
+            return {'base_grid_pt': None, 'grid_fit_ratio_8': 0.0,
+                    'grid_fit_ratio_4': 0.0, 'common_gaps_pt': []}
+        f8 = sum(1 for g in rounded if g % 8 == 0) / len(rounded)
+        f4 = sum(1 for g in rounded if g % 4 == 0) / len(rounded)
+        base = 8 if f8 >= 0.6 else (4 if f4 >= 0.6 else None)
+        common = [v for v, _ in Counter(rounded).most_common(6)]
+        return {
+            'base_grid_pt': base,
+            'grid_fit_ratio_8': round(f8, 2),
+            'grid_fit_ratio_4': round(f4, 2),
+            'common_gaps_pt': sorted(common),
+        }
+
+    def estimate_typography(self, image: np.ndarray, text_regions: List[Dict[str, Any]],
+                            scale: float) -> List[Dict[str, Any]]:
+        """Estimate font size (pt) and text color per OCR text box (low confidence)."""
+        out = []
+        for r in text_regions:
+            x = max(0, r['position']['x'])
+            y = max(0, r['position']['y'])
+            w = r['size']['width']
+            h = r['size']['height']
+            font_pt = round(h / scale, 1) if scale else float(h)
+
+            text_color = None
+            region = image[y:y + h, x:x + w]
+            if region.size:
+                cols = self.extract_colors(region, num_colors=2)
+                # Heuristic: the less frequent cluster tends to be the glyph color
+                if len(cols) >= 2:
+                    text_color = cols[-1]['hex']
+                elif cols:
+                    text_color = cols[0]['hex']
+
+            out.append({
+                'text': r['text'],
+                'font_size_pt_est': font_pt,
+                'box_height_px': int(h),
+                'text_color_est': text_color,
+                'position': r['position'],
+                'confidence': 'low',
+            })
+        return out
+
     def analyze_all(self):
         """Analyze all images in folder."""
         self.load_images()
@@ -227,82 +465,121 @@ class ImageAnalyzer:
         if not output_path:
             timestamp = datetime.now().strftime('%Y%m%d%H%M')
             output_path = f"docs/design/{self.ticket_id}_image_analysis_{timestamp}.md"
-        
+
         lines = [
             f"# Design Image Analysis Report",
             f"**Ticket:** {self.ticket_id}",
             f"**Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Method:** Python + OpenCV Image Analysis",
-            f"**Accuracy:** ~70-80% (estimated from contours and colors)",
+            f"**Accuracy:** ~70-80% (estimated from contours, colors, and spacing heuristics)",
             "",
             "## Summary",
         ]
-        
+
         for result in self.analysis_results:
             if 'error' in result:
-                lines.append(f"- ❌ {result['file']}: {result['error']}")
+                lines.append(f"- [FAIL] {result['file']}: {result['error']}")
             else:
-                lines.append(f"- ✅ {result['file']}: {result['dimensions']['width']}x{result['dimensions']['height']}, {len(result.get('components', []))} components")
-        
+                lines.append(
+                    f"- [OK] {result['file']}: "
+                    f"{result['dimensions']['width']}x{result['dimensions']['height']}px "
+                    f"@{result.get('scale', '?')}x, {len(result.get('components', []))} components"
+                )
+
         lines.extend([
             "",
             "## Detailed Analysis",
         ])
-        
+
         for result in self.analysis_results:
             if 'error' in result:
                 continue
-            
+
+            scale = result.get('scale', 1)
+            logical = result.get('logical_size_pt', {})
             lines.extend([
                 f"### {result['file']}",
-                f"**Dimensions:** {result['dimensions']['width']}x{result['dimensions']['height']}",
+                "",
+                "#### Screen Properties",
+                "| Property | Value |",
+                "|---|---|",
+                f"| Device (inferred) | {result.get('device', 'unknown')} |",
+                f"| Render scale | @{scale}x ({result.get('scale_confidence', 'low')} confidence) |",
+                f"| Orientation | {result.get('orientation', 'unknown')} |",
+                f"| Pixel size | {result['dimensions']['width']}x{result['dimensions']['height']} px |",
+                f"| Logical size | {logical.get('width', '?')}x{logical.get('height', '?')} pt |",
                 "",
                 "#### Dominant Colors",
-                "| Hex Color | RGB | Frequency |",
+                "| Hex Color | RGB | Ratio |",
                 "|---|---|---|",
             ])
-            
-            for color in result['colors'][:5]:
-                lines.append(f"| {color['hex']} | {color['rgb']} | {color['frequency']} |")
-            
+
+            for c in result['colors'][:8]:
+                lines.append(f"| {c['hex']} | {c['rgb']} | {c.get('ratio', 0)} |")
+
             lines.extend([
                 "",
-                "#### Detected Components",
-                "| Position | Size | Background Color | Confidence |",
-                "|---|---|---|---|",
+                "#### Detected Components (position/size in points)",
+                "| # | Position (pt) | Size (pt) | Background | Confidence |",
+                "|---|---|---|---|---|",
             ])
-            
-            for comp in result['components'][:10]:
-                bg_color = comp.get('background_color', {}).get('hex', 'N/A') if comp.get('background_color') else 'N/A'
+
+            for idx, comp in enumerate(result['components'], start=1):
+                bg = comp.get('background_color') or {}
+                bg_hex = bg.get('hex', 'N/A')
+                px = round(comp['position']['x'] / scale, 1) if scale else comp['position']['x']
+                py = round(comp['position']['y'] / scale, 1) if scale else comp['position']['y']
+                pw = round(comp['size']['width'] / scale, 1) if scale else comp['size']['width']
+                ph = round(comp['size']['height'] / scale, 1) if scale else comp['size']['height']
                 lines.append(
-                    f"| ({comp['position']['x']}, {comp['position']['y']}) | "
-                    f"{comp['size']['width']}x{comp['size']['height']} | "
-                    f"{bg_color} | "
-                    f"{comp['confidence']} |"
+                    f"| {idx} | ({px}, {py}) | {pw}x{ph} | {bg_hex} | {comp['confidence']} |"
                 )
-            
-            if len(result['components']) > 10:
-                lines.append(f"... and {len(result['components']) - 10} more components")
-            
-            # Add text regions if available
-            if result.get('text_regions'):
+
+            # Layout relations
+            layout = result.get('layout', {})
+            spacing = layout.get('spacing_scale', {})
+            groups = layout.get('alignment_groups', {})
+            lines.extend([
+                "",
+                "#### Layout Relations",
+                f"- Base spacing grid: {spacing.get('base_grid_pt') or 'not detected'} pt "
+                f"(8pt fit {spacing.get('grid_fit_ratio_8', 0)}, 4pt fit {spacing.get('grid_fit_ratio_4', 0)})",
+                f"- Common gaps (pt): {spacing.get('common_gaps_pt', [])}",
+                f"- Left-aligned groups (component #): {groups.get('left_aligned', [])}",
+                f"- Right-aligned groups (component #): {groups.get('right_aligned', [])}",
+                f"- Center-x-aligned groups (component #): {groups.get('center_x_aligned', [])}",
+            ])
+
+            # Typography (from OCR estimation)
+            if result.get('typography'):
+                lines.extend([
+                    "",
+                    "#### Typography (estimated from OCR)",
+                    "| Text | Font size (pt, est) | Text color (est) | Position (px) | Confidence |",
+                    "|---|---|---|---|---|",
+                ])
+                for t in result['typography']:
+                    lines.append(
+                        f"| {t['text']} | {t['font_size_pt_est']} | {t.get('text_color_est', 'N/A')} | "
+                        f"({t['position']['x']}, {t['position']['y']}) | {t['confidence']} |"
+                    )
+            elif result.get('text_regions'):
                 lines.extend([
                     "",
                     "#### Extracted Text Regions",
-                    "| Text | Position | Size | Confidence |",
+                    "| Text | Position (px) | Size (px) | OCR confidence |",
                     "|---|---|---|---|",
                 ])
-                
-                for region in result['text_regions'][:10]:
+                for region in result['text_regions']:
                     lines.append(
                         f"| {region['text']} | "
                         f"({region['position']['x']}, {region['position']['y']}) | "
                         f"{region['size']['width']}x{region['size']['height']} | "
                         f"{region['confidence']:.1f} |"
                     )
-            
+
             lines.append("")
-        
+
         # Add notes section
         lines.extend([
             "## Manual Refinements Required",
@@ -320,20 +597,22 @@ class ImageAnalyzer:
             "```",
             "",
             "## Integration Notes",
-            "- Position/size values are in pixels; convert to points (÷2 for @2x) if needed",
-            "- Colors are detected from pixel sampling; verify with design tool",
-            "- Component boundaries estimated from edge detection; may need manual adjustment",
-            "- For precise specs, combine with manual annotations in `notes.md`",
+            "- Position/size in the tables are already converted to points using the inferred @Nx scale.",
+            "- If the device/scale inference confidence is low, verify the scale before using point values.",
+            "- Colors are detected from pixel sampling; verify tokens with the design tool.",
+            "- Component boundaries are estimated from edge detection; merge/adjust as needed.",
+            "- Spacing grid and alignment groups are heuristics to seed layout constraints, not exact specs.",
+            "- For precise specs, combine with manual annotations in `notes.md`.",
         ])
-        
+
         markdown = "\n".join(lines)
-        
+
         # Write to file
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             f.write(markdown)
-        
-        print(f"\n✅ Report saved to: {output_path}")
+
+        print(f"\n[OK] Report saved to: {output_path}")
         return markdown
     
     def export_json(self, output_path: str = None) -> str:
@@ -353,7 +632,7 @@ class ImageAnalyzer:
         with open(output_path, 'w') as f:
             json.dump(json_data, f, indent=2)
         
-        print(f"✅ JSON specs saved to: {output_path}")
+        print(f"[OK] JSON specs saved to: {output_path}")
         return output_path
 
 
@@ -383,7 +662,7 @@ def main():
     analyzer.generate_markdown_report(args.output)
     analyzer.export_json()
     
-    print("\n✅ Analysis complete!")
+    print("\n[OK] Analysis complete!")
 
 
 if __name__ == '__main__':

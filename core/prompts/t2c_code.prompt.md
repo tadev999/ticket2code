@@ -48,7 +48,7 @@ FIGMA_TOKEN=<your Figma personal access token>
 
 For screenshot/image analysis mode:
 - Model vision: No additional setup required (uses AI analysis)
-- Python+OpenCV: Install `pip install opencv-python numpy pillow scikit-image`
+- Python+OpenCV: Install `pip install opencv-python numpy pillow`
 
 Proxy note for setup/install:
 - If any install command fails with proxy-related errors (for example: `407 Proxy Authentication Required`, `proxy connect`, `tunnel connection failed`, `CERTIFICATE_VERIFY_FAILED` behind corporate proxy), stop and ask DEV to provide proxy info before retrying.
@@ -71,7 +71,7 @@ See `ticket2code/SETUP.md` for step-by-step instructions.
    - If Figma link(s) found:
      - If MCP available: ask DEV: "Analyze this Figma design? (API mode)" → proceed only if user confirms
      - If MCP NOT available: inform DEV "Figma API analysis not available (MCP limitation)" → offer external tools option
-   - Separately, check for image attachments (screenshots) in ticket
+  - Separately, check for image attachments (screenshots) in ticket
    - If image attachments found, ask DEV for confirmation before download/inspection (required gate, include vision capability note)
    - If no Figma link and no images found, ask DEV to choose one design input option:
      - `No` (continue without design analysis)
@@ -83,10 +83,12 @@ See `ticket2code/SETUP.md` for step-by-step instructions.
 3. Use the `jira-pbi-analysis` skill workflow to analyze ticket fields, comments, linked issues, and attachments (with confirmation gates).
 4. If Figma/design analysis was run (after user confirmation), merge design specifications with JIRA analysis into unified implementation guide
 5. Decompose Acceptance Criteria into atomic items using the `ac-decomposition` skill.
-6. Produce analysis report first, save to `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md`, then stop at confirmation gate.
-7. After code changes, perform dead-code and orphan-reference cleanup using the `dead-code-cleanup` skill.
-8. Ask DEV whether to run tests/build now or defer.
-9. Append evaluation against AC to the same report artifact.
+6. Produce the PBI-based analysis report first, save to `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md`.
+7. Offer a supplementary-input step before coding (Gate Supplement): ask DEV whether to add extra context via Excel/CSV, image, `.md`/`.txt` file, or typed text; if provided, convert Excel via `excel-to-markdown`, inspect image, read text files/notes, merge findings into an updated report, and re-present it.
+8. Stop at the analysis confirmation gate (Gate A).
+9. After code changes, perform dead-code and orphan-reference cleanup using the `dead-code-cleanup` skill.
+10. Ask DEV whether to run tests/build now or defer.
+11. Append evaluation against AC to the same report artifact.
 
 ## Mandatory Interaction Gates
 
@@ -101,7 +103,7 @@ When design input is detected (Figma URLs or image attachments):
 - Options (depending on MCP availability):
   - **If MCP available:** `Yes, analyze (API)` / `Use external tools` / `Manual input` / `No, skip` / `Cancel`
   - **If MCP NOT available:** `Use external tools` / `Manual input` / `No, skip` / `Cancel`
-- Only `Yes, analyze (API)` (when MCP available) allows execution of figma_analyze.js scripts
+- Only `Yes, analyze (API)` (when MCP available) allows execution of figma_analyze.py scripts
 - `Use external tools` suggests DEV use external Figma-to-JSON converter (e.g., `figma-export-json` CLI) → export design to JSON → provide filename for parsing
 - `Manual input` requests additional Figma links or folder paths
 - `No, skip` or `Cancel` branches accordingly
@@ -112,9 +114,13 @@ When design input is detected (Figma URLs or image attachments):
 - Include capability statement: "Note: my vision/image reading capability may be limited. If analysis is incomplete, you can provide manual descriptions."
 - Ask DEV: "Do you want me to download and inspect these images?"
 - Options: `Yes, download and analyze` / `No, skip` / `Provide manual descriptions` / `Use external tools` / `Cancel`
-- Only `Yes, download and analyze` proceeds to local download and inspection
+- Only `Yes, download and analyze` proceeds to local download and inspection:
+  - Run the network preflight first: `[ -f .env.local ] && set -a && . ./.env.local && set +a`
+  - Download each image `content` URL into `docs/figma_design_analysis/<TICKET-ID>_screenshots/` (the canonical folder the analyzer reads), then route that folder to `design-image-ocr-analysis` (Mode 1 vision, or `image_analyze.py --input-folder <folder> --ticket-id <TICKET-ID>`). See jira-pbi-analysis and design-image-ocr-analysis skills for the exact commands.
 - `Provide manual descriptions` requests DEV to describe images manually
 - `Use external tools` suggests DEV use external OCR/image tools to extract specs → export to JSON/markdown → provide filename for parsing
+- `No, skip` or `Cancel` branches accordingly
+
 - `No, skip` or `Cancel` branches accordingly
 
 Gate rule:
@@ -122,6 +128,25 @@ Gate rule:
 - Always wait for explicit user input before any design processing
 - Check MCP capability before offering Figma API option
 - If analysis fails (vision not supported, API error, MCP missing, etc.), offer fallback: external tools, manual description, or skip
+
+### Gate Supplement - Supplementary input before coding (after PBI report, before Gate A)
+
+After the PBI-based analysis report is produced and saved, ask DEV whether to add extra context before coding:
+- Ask DEV: "Do you want to supplement additional information (Excel, image, .md/.txt file, or typed text) before coding?"
+- Options: `Provide Excel/CSV` / `Provide image` / `Provide text file (.md/.txt)` / `Type text directly` / `Provide multiple` / `No, proceed`
+
+Handling:
+- `Provide Excel/CSV`: DEV supplies spreadsheet file(s); convert with `excel-to-markdown`, store under `docs/attachments/<TICKET-ID>/excel/`, extract supplementary requirements/data with `filename + sheet + row/column` references.
+- `Provide image`: DEV supplies image(s); inspect with model vision or `design-image-ocr-analysis` (include vision capability note); extract supplementary details with filename references.
+- `Provide text file (.md/.txt)`: DEV supplies `.md`/`.txt` file(s); read content directly, store a copy under `docs/attachments/<TICKET-ID>/notes/`, extract supplementary requirements/constraints with `filename + line/section` references.
+- `Type text directly`: DEV types text in chat; capture it verbatim as a `DEV note` and extract supplementary requirements/constraints.
+- `Provide multiple`: handle each provided source with the rules above.
+- `No, proceed`: continue to Gate A with the current report unchanged.
+
+Gate rule:
+- If any supplement is provided, merge findings into the report (update Section 1.8 Supplementary information and affected modules/APIs/files/impact flows/AC), re-save the report file, and re-present it before Gate A.
+- This gate never generates code; it only enriches the report.
+- If DEV did not explicitly choose an option, stop and ask again.
 
 ### Gate A - Analysis confirmation (before any code edits)
 
@@ -168,10 +193,12 @@ Gate behavior:
     3. **External tools option:** DEV uses external tools (Figma-to-JSON converter, image OCR tools, etc.) to extract specs → export to JSON/markdown → provide filename for AI to parse
 - **FIGMA_TOKEN requirement:** Required only for direct Figma API mode. Screenshot/OCR mode must remain available without `FIGMA_TOKEN`.
 - Supported attachments for in-session inspection are static images only (`png`, `jpg`, `jpeg`, `webp`, `gif`) **after explicit DEV confirmation and local download**; video attachments are not supported for in-session inspection.
+- Supplementary Excel/image input is offered as an explicit step after the PBI report and before coding (Gate Supplement); spreadsheets (`xlsx`, `xls`, `csv`) are converted to markdown via `excel-to-markdown` only after explicit DEV confirmation.
 - If a relevant attachment cannot be parsed or inspected:
   - The analysis report must include `Attachment Limitations` section
   - Ask DEV for decision: provide manual description, skip, or cancel
   - Do not proceed to code generation without explicit DEV confirmation
+- Spreadsheet-backed claims must cite at least `filename + sheet + row/column`.
 - Never modify code or run write/edit tools before Gate A explicit approval (`Confirm and implement`).
 - Never run test/build commands before Gate B explicit approval (`Yes, run now`).
 - Do not infer or auto-default DEV decisions at any gate.
@@ -195,6 +222,7 @@ Gate behavior:
 - **Requirement analysis skill** → `.github/skills/jira-pbi-analysis/SKILL.md`
 - **Design analysis skill (Figma)** → `.github/skills/figma-design-analysis/SKILL.md`
 - **Design analysis skill (Image OCR)** → `.github/skills/design-image-ocr-analysis/SKILL.md`
+- **Excel conversion skill** → `core/skills/excel-to-markdown/SKILL.md`
 - **AC Decomposition skill** → `.github/skills/ac-decomposition/SKILL.md`
 - **Dead Code Cleanup skill** → `.github/skills/dead-code-cleanup/SKILL.md`
 

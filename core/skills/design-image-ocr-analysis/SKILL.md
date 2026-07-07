@@ -44,8 +44,7 @@ Use this skill when:
   - `.png`, `.jpg`, `.jpeg`, `.webp`
 - Runtime dependencies:
   - `Python 3.8+` with `opencv-python`, `numpy`, `pillow` packages
-  - `scikit-image` for edge detection and contour analysis
-  - Install: `pip install opencv-python numpy pillow scikit-image`
+  - Install: `pip install opencv-python numpy pillow`
 - Optional:
   - `notes.md` inside the folder for manual annotations/assumptions
 
@@ -71,9 +70,13 @@ This skill has three operational modes depending on available capabilities:
 
 ### Mode 2: Secondary - Python + OpenCV Image Analysis (Visual + Text)
 - **Requirements:**
-  - `Python 3.8+` with libraries: `opencv-python`, `numpy`, `pillow`, `scikit-image`
+  - `Python 3.8+` with libraries: `opencv-python`, `numpy`, `pillow`
   - Python available in system `PATH`
-  - Install: `pip install opencv-python numpy pillow scikit-image`
+  - Install: `pip install opencv-python numpy pillow`
+  - Behind a corporate proxy, run the network preflight first so `pip` inherits proxy/CA settings from `.env.local`:
+    ```bash
+    [ -f .env.local ] && set -a && . ./.env.local && set +a
+    ```
 - **Process:**
   1. Run Python OpenCV analysis script on screenshot folder
   2. Extract: component boundaries (contour detection), colors (pixel sampling), text regions (OCR via pytesseract optional)
@@ -160,10 +163,10 @@ This skill has three operational modes depending on available capabilities:
    - If fail (error/disabled) → Continue to Step 2
 
 2. **Check Python + OpenCV**
-   - Run: `python3 --version && python3 -c "import cv2; import numpy; import PIL; import skimage"`
+   - Run: `python3 --version && python3 -c "import cv2; import numpy; import PIL"`
    - If available → Offer Mode 2 (Python + OpenCV automated analysis)
    - If not available (missing Python or libraries) → Continue to Step 3
-   - If OpenCV missing: suggest `pip install opencv-python numpy pillow scikit-image`
+   - If OpenCV missing: suggest `pip install opencv-python numpy pillow`
 
 3. **Request DEV Manual Input**
    - Offer Mode 3 (full manual specifications)
@@ -232,14 +235,14 @@ docs/figma_design_analysis/<TICKET-ID>_screenshots/
 ### Vision Capability Check (First Step)
 - Before processing images:
   1. Check: Does model support vision/image reading? (try reading test image)
-  2. Check: Is Python + OpenCV available? (test imports: `opencv`, `numpy`, `PIL`, `scikit-image`)
+  2. Check: Is Python + OpenCV available? (test imports: `opencv`, `numpy`, `PIL`)
   3. Determine operating mode:
      - If model vision available → Use Mode 1 (full AI analysis)
      - Else if Python + OpenCV available → Offer Mode 2 (automated image analysis)
      - Else → Fall back to Mode 3 (manual specifications)
 - Document capability status upfront to DEV
 - Never proceed silently; always inform DEV of mode and any limitations
-- If Python/OpenCV missing: suggest `pip install opencv-python numpy pillow scikit-image`
+- If Python/OpenCV missing: suggest `pip install opencv-python numpy pillow`
 - If install command fails with proxy-related error (`407`, `proxy`, `tunnel`, SSL/certificate error via proxy), stop and ask DEV for proxy info before retrying.
 
 ### Input Validation
@@ -368,6 +371,76 @@ This step produces concrete layout specs that developers can use directly for co
    - Alternative: JSON format for machine-readable specs (if DEV prefers)
    - Always cite source screenshot filename for each spec
 
+### Mode 1 Strict Extraction Contract (model vision)
+When using model vision (Mode 1), extract every screen into the JSON schema below so the output is consistent, comparable across screenshots, and directly usable for layout code. Use `null` for any value that cannot be determined from the image, and always record `confidence` per field group.
+
+```json
+{
+  "ticket": "PROJ-1234",
+  "source_file": "01_default.png",
+  "screen": {
+    "device_guess": "iPhone 14",
+    "pixel_size": { "width": 1170, "height": 2532 },
+    "scale": 3,
+    "logical_size_pt": { "width": 390, "height": 844 },
+    "safe_area_pt": { "top": 47, "right": 0, "bottom": 34, "left": 0 },
+    "confidence": "medium"
+  },
+  "spacing_scale": { "base_grid_pt": 8, "common_gaps_pt": [8, 16, 24], "confidence": "medium" },
+  "components": [
+    {
+      "name": "PrimaryButton",
+      "role": "button",
+      "z_order": 1,
+      "position_pt": { "top": 700, "left": 16 },
+      "size_pt": { "width": 358, "height": 56 },
+      "relative": { "width": "fill_minus_margins", "h_align": "center", "v_align": "bottom" },
+      "padding_pt": { "top": 0, "right": 16, "bottom": 0, "left": 16 },
+      "margin_pt": { "top": 24, "right": 16, "bottom": 16, "left": 16 },
+      "typography": {
+        "family_guess": "SF Pro Display",
+        "size_pt": 16,
+        "weight": "bold",
+        "line_height_pt": 20,
+        "letter_spacing_pt": 0,
+        "color": "#FFFFFF",
+        "align": "center"
+      },
+      "visual": {
+        "background": "#0066FF",
+        "gradient": null,
+        "border": { "width_pt": 0, "color": null, "style": null },
+        "corner_radius_pt": 12,
+        "shadow": { "x_pt": 0, "y_pt": 2, "blur_pt": 8, "color": "#000000", "opacity": 0.15 },
+        "opacity": 1.0
+      },
+      "states": { "disabled": { "background": "#CCCCCC" } },
+      "confidence": "medium",
+      "source_file": "01_default.png"
+    }
+  ],
+  "responsive": [
+    { "rule": "PrimaryButton stays pinned to bottom safe-area, width fills minus 16pt margins", "confidence": "medium" }
+  ],
+  "assumptions": [
+    "Font family is a guess; not verifiable from raster image"
+  ]
+}
+```
+
+Mandatory extraction checklist (Mode 1):
+- [ ] Screen: device/platform guess, pixel size, inferred `@scale`, and safe-area insets (in pt).
+- [ ] Prefer relative units (%, fill, safe-area offsets) alongside absolute pt so layout code is responsive.
+- [ ] For every component: role/name, position (pt), size (pt), and z-order.
+- [ ] Spacing: padding, margin, and inter-component gaps; test against a 4/8pt grid and report the base grid.
+- [ ] Alignment/distribution per group: left / right / center / fill and equal-spacing.
+- [ ] Typography per text: family guess, size (pt), weight, line-height, letter-spacing, color, alignment.
+- [ ] Visual: background/gradient, border (width/color/style), corner radius, shadow (x/y/blur/color/opacity), opacity.
+- [ ] States: default / error / disabled / loading deltas inferred across screenshots.
+- [ ] Responsive: what resizes vs reflows vs hides across different sizes/orientations.
+- [ ] Record `confidence` (high/medium/low) per field group and cite the source screenshot filename.
+- [ ] List any value not derivable from the image under `assumptions` instead of guessing silently.
+
 ### Cross-Reference with JIRA
 1. Map JIRA AC to screenshot-derived components/states.
 2. Flag AC without visual evidence.
@@ -399,8 +472,8 @@ This step produces concrete layout specs that developers can use directly for co
   - If Python + OpenCV available: offer Mode 2 (automated image analysis)
   - If Python + OpenCV unavailable: fall back to Mode 3 (request manual specs)
 - **Python + OpenCV not found:**
-  - Document: "Python not in PATH" or "Required libraries missing: opencv-python, numpy, pillow, scikit-image"
-  - Suggest: `pip install opencv-python numpy pillow scikit-image`
+  - Document: "Python not in PATH" or "Required libraries missing: opencv-python, numpy, pillow"
+  - Suggest: `pip install opencv-python numpy pillow`
   - If install fails because of proxy restrictions (`407 Proxy Authentication Required`, `proxy connect`, `tunnel connection failed`, `CERTIFICATE_VERIFY_FAILED` in corporate network), ask DEV to provide:
     - Proxy URL (`http://host:port` or `https://host:port`)
     - Whether proxy authentication is required

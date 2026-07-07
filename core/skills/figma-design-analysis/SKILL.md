@@ -35,8 +35,14 @@ Do not use this skill for screenshot/image-only inputs.
 - One of:
   - A full Figma design URL: `https://www.figma.com/design/FILE_KEY/Title?node-id=123-456`
   - A Figma `FILE_KEY + NODE_ID` pair
-- Node.js available on the machine
+- Python 3.8+ available on the machine (standard library only — no extra packages)
 - `FIGMA_TOKEN` available in `.env.local`
+- Optional corporate proxy: if `.env.local` defines `HTTPS_PROXY`/`HTTP_PROXY` (and `NO_PROXY`),
+  the script tunnels Figma API calls through the proxy automatically via CONNECT. Run the
+  network preflight first so the loader picks them up:
+  ```bash
+  [ -f .env.local ] && set -a && . ./.env.local && set +a
+  ```
 
 ## Support Policy
 - Supported:
@@ -53,14 +59,14 @@ Do not use this skill for screenshot/image-only inputs.
 
 ## Preferred Script
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --figma-url "https://www.figma.com/design/FILE_KEY/Title?node-id=123-456" \
   --output docs/design/output.md
 ```
 
 Using file key and node id directly:
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --file-key FILE_KEY \
   --node-id 123:456 \
   --output docs/design/output.md
@@ -68,7 +74,7 @@ node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
 
 Exporting SVG with the same script:
 ```bash
-node ./.github/skills/figma-design-analysis/scripts/figma_analyze.js \
+python3 ./.github/skills/figma-design-analysis/scripts/figma_analyze.py \
   --figma-url "https://www.figma.com/design/FILE_KEY/Title?node-id=123-456" \
   --export-svg \
   --asset-output docs/assets/figma-link-01.svg

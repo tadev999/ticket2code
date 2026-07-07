@@ -36,10 +36,11 @@ See `ticket2code/SETUP.md` for full setup instructions.
 1. **First step:** Ask DEV to select communication language and stop until explicit selection.
 2. **Second step:** Ask DEV to select execution phase (`Pre-Dev` or `Post-Dev`) and stop until explicit selection.
 3. Use `jira-pbi-analysis` workflow to build requirement inventory from ticket data and attachments.
-4. Generate and present analysis report first, then stop at confirmation gate.
-5. Decompose Acceptance Criteria into atomic items using the `ac-decomposition` skill.
-6. Generate categorized integration test cases, designing the test environment using the `test-environment-designer` skill.
-7. Detail step-by-step expected results and validate AC coverage, producing a traceability matrix.
+4. If spreadsheet attachments are approved, convert them to markdown via `excel-to-markdown` before test-case synthesis.
+5. Generate and present analysis report first, then stop at confirmation gate.
+6. Decompose Acceptance Criteria into atomic items using the `ac-decomposition` skill.
+7. Generate categorized integration test cases, designing the test environment using the `test-environment-designer` skill.
+8. Detail step-by-step expected results and validate AC coverage, producing a traceability matrix.
 
 ## Mandatory Interaction Gates
 
@@ -76,7 +77,9 @@ Gate behavior:
 
 - Communication language controls AI-DEV conversation and report narrative only; it does not control programming language, framework, or code syntax.
 - Supported attachments for in-session inspection are static images only (`png`, `jpg`, `jpeg`, `webp`, `gif`) after local download; video attachments are not supported for in-session inspection.
+- Supported spreadsheet attachments (`xlsx`, `xls`, `csv`) require explicit DEV confirmation, local download, and markdown conversion before requirement use.
 - If a relevant attachment cannot be parsed or inspected, the analysis report must include `Attachment Limitations` and the workflow must stop for explicit DEV confirmation before detailed test-case generation.
+- Spreadsheet-backed statements must cite at least `filename + sheet + row/column`.
 - Apply phase-specific rules consistently in labeling and validation strictness.
 - Keep categories clear and non-overlapping.
 - Never generate detailed test cases before Gate C explicit approval (`Confirm and generate test cases`).
@@ -90,6 +93,7 @@ Gate behavior:
 - **Requirement analysis skill** → `.github/skills/jira-pbi-analysis/SKILL.md`
 - **AC Decomposition skill** → `.github/skills/ac-decomposition/SKILL.md`
 - **Test Environment Designer skill** → `.github/skills/test-environment-designer/SKILL.md`
+- **Excel conversion skill** → `core/skills/excel-to-markdown/SKILL.md`
 
 ### Two-phase model rules
 
