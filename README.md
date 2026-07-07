@@ -19,7 +19,7 @@ ticket2code/
 ├── templates/            # Project bootstrap templates
 ├── installers/           # Installation, upgrade, and diagnostic scripts
 ├── docs/                 # Documentation and guides
-└── CHANGELOG.md          # Version history
+└── VERSION               # Version identifier
 ```
 
 ---
@@ -38,11 +38,11 @@ python3 "$TMP_DIR"/installers/t2c_installer.py install --target-dir . && \
 rm -rf "$TMP_DIR"
 ```
 
-**Windows (PowerShell):**
-```powershell
+**Windows (Command Prompt):**
+```bat
 set TMP_DIR=%TEMP%\ticket2code-tmp
 git clone --depth 1 https://github.com/tadev999/ticket2code.git %TMP_DIR%
-py "%TMP_DIR%\installers\t2c_installer.py" install --target-dir .
+py "%TMP_DIR%\installers\t2c_installer.py" install --target-dir "C:\path\to\target-repo"
 rmdir /s /q %TMP_DIR%
 ```
 
@@ -71,7 +71,10 @@ Comprehensive workflow: requirement analysis → code generation → dead code c
 
 **How it works:**
 1. Analyzes JIRA ticket with requirement breakdown and attachment inspection
-2. Presents analysis report and waits for your confirmation
+   - Includes image attachment inspection (with confirmation)
+2. Presents the PBI-based analysis report
+   - Then offers an optional supplementary-input step: add extra context via Excel/CSV, image, `.md`/`.txt` file, or typed text before coding
+   - Any supplement is analyzed and merged into an updated report
 3. Generates code implementation across necessary files
 4. Automatically cleans up dead code and orphaned references (with before/after evidence)
 5. Asks whether to run tests/builds now or defer
@@ -188,6 +191,7 @@ Specialized test cases focused on screen navigation, transitions, and UI state v
 - **Use `/t2c_screen_transition_tests`** for UI-heavy features to ensure navigation correctness
 - **Language selection is contextual**: Controls report language and narrative, not code syntax
 - **All reports are saved** to project directories for record-keeping and reference
+- **Attachment evidence is traceable**: when images/spreadsheets are used, reports cite those sources explicitly
 
 ---
 
@@ -252,7 +256,6 @@ Comprehensive guides are available in the `docs/` directory:
 ## Version Information
 
 - **Current Version:** See `VERSION` file
-- **Release History:** See `CHANGELOG.md`
 - **Compatibility:** See `docs/compatibility-matrix.md`
 
 ---
@@ -295,6 +298,21 @@ JIRA_URL=<your JIRA base URL>
 ```
 
 Generate JIRA API token: https://id.atlassian.com/manage-profile/security/api-tokens
+
+### Optional: Corporate Proxy (.env.local)
+
+If your machine is behind a proxy that requires authentication, add these to `.env.local`. Any skill that performs network or install steps (`curl`, `pip install`, Figma API fetch) loads `.env.local` first, so no per-command flags are needed:
+
+```bash
+# URL-encode special characters in USER/PASS (@ -> %40, : -> %3A, / -> %2F)
+HTTPS_PROXY="http://USER:PASS@proxy.host:PORT"
+HTTP_PROXY="http://USER:PASS@proxy.host:PORT"
+NO_PROXY="localhost,127.0.0.1,.company.local"
+
+# Only if you hit CERTIFICATE_VERIFY_FAILED behind a TLS-intercepting proxy
+#REQUESTS_CA_BUNDLE="/absolute/path/to/corp-ca.pem"
+#CURL_CA_BUNDLE="/absolute/path/to/corp-ca.pem"
+```
 
 For detailed setup, see `ticket2code/SETUP.md`.
 
