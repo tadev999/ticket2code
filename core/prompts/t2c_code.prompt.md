@@ -144,6 +144,7 @@ Handling:
 - `No, proceed`: continue to Gate A with the current report unchanged.
 
 Gate rule:
+- This gate is mandatory to ASK: always present the supplementary-input question after the report is saved and before Gate A. Never auto-skip; only DEV may decline via `No, proceed`.
 - If any supplement is provided, merge findings into the report (update Section 1.8 Supplementary information and affected modules/APIs/files/impact flows/AC), re-save the report file, and re-present it before Gate A.
 - This gate never generates code; it only enriches the report.
 - If DEV did not explicitly choose an option, stop and ask again.
