@@ -42,6 +42,7 @@ Completeness requirements (mandatory before Stage 3):
 - Normalize conditional AC into explicit branches.
 - Record any ambiguous or unclear requirements as gaps.
 - Review supported static image attachments after local download and inspection when they affect UI/transition requirements.
+- Review supported spreadsheet attachments (`xlsx`, `xls`, `csv`) after local download and markdown conversion when they affect UI/transition requirements.
 - Record unsupported video attachments and unreadable attachments as explicit limitations.
 
 Failure handling:
@@ -74,6 +75,10 @@ Save to: docs/test/screen-transition/<TICKET-ID>_screen_transition_tests_<predev
 
 Attachment limitation rule:
 - If any relevant attachment could not be downloaded, parsed, or inspected, the analysis report must include an `Attachment Limitations` subsection with file, reason, and confidence impact.
+
+Evidence traceability rule:
+- If image and/or spreadsheet attachments were used, the analysis report must cite them explicitly.
+- Spreadsheet evidence must include `filename + sheet + row/column` for each transition-relevant claim.
 
 ### Stage 4.5 — Request DEV confirmation (mandatory)
 - Present Stage 4 analysis report and ask DEV to choose exactly one option:

@@ -42,6 +42,7 @@ Completeness requirements (mandatory before Stage 3):
 - Normalize conditional AC into explicit branches.
 - Record any ambiguous or unclear requirements as gaps.
 - Review supported static image attachments after local download and inspection when they affect requirements.
+- Review supported spreadsheet attachments (`xlsx`, `xls`, `csv`) after local download and markdown conversion when they affect requirements.
 - Record unsupported video attachments and unreadable attachments as explicit limitations.
 
 Failure handling:
@@ -72,6 +73,10 @@ Save to: docs/test/integration/<TICKET-ID>_integration_tests_<predev|postdev>_<Y
 
 Attachment limitation rule:
 - If any relevant attachment could not be downloaded, parsed, or inspected, the analysis report must include an `Attachment Limitations` subsection with file, reason, and confidence impact.
+
+Evidence traceability rule:
+- If image and/or spreadsheet attachments were used, the analysis report must cite them explicitly.
+- Spreadsheet evidence must include `filename + sheet + row/column` for critical requirements and test inputs.
 
 ### Stage 4.5 — Request DEV confirmation (mandatory)
 - Present Stage 4 analysis report and ask DEV to choose exactly one option:

@@ -46,6 +46,7 @@ Completeness requirements (mandatory before Stage 3):
 	- Linked issues metadata
 	- Attachment metadata
 	- Supported static image attachment content, after local download and inspection
+  - Supported spreadsheet attachment content (`xlsx`, `xls`, `csv`) after local download and markdown conversion
 	- Comments/changelog/custom fields when present in fetched payload
 - Normalize conditional behavior into explicit branches; do not merge distinct outcomes.
 - Record unresolved or ambiguous fields as explicit gaps.
@@ -115,6 +116,7 @@ Must include:
 - Affected modules, APIs, files to modify/create
 - Code fix approach and impact flows
 - Related patterns and known incidents
+- Source evidence summary for image and spreadsheet attachments (when present)
 - (If Figma analysis completed) Design specifications section with:
   - Component hierarchy and specs
   - Design tokens and accessibility requirements
@@ -127,6 +129,53 @@ Must include:
 
 Attachment limitation rule:
 - If any relevant attachment could not be downloaded, parsed, or inspected, Section 1 must include an `Attachment Limitations` subsection with file, reason, and confidence impact.
+
+Evidence traceability rule:
+- If image and/or spreadsheet attachments were used, Section 1 must include explicit references to those sources.
+- Spreadsheet references must include at least `filename + sheet name + row/column` for each critical claim.
+
+### Stage 5.5 — Supplementary input gate (optional, before confirmation)
+Purpose:
+- After the PBI-based report exists, allow DEV to add extra context before coding.
+- Supported supplement sources: Excel/CSV, image, text file (`.md`, `.txt`), and direct text input typed by DEV.
+- This stage only enriches the report; it never generates code.
+
+Procedure:
+- Ask DEV: "Do you want to supplement additional information (Excel, image, .md/.txt file, or typed text) before coding?"
+- For VSCode use vscode_askQuestions.
+- Required options (exact intent):
+	- Provide Excel/CSV
+	- Provide image
+	- Provide text file (.md / .txt)
+	- Type text directly
+	- Provide multiple
+	- No, proceed
+- If Excel/CSV provided:
+	- convert the file(s) with the `excel-to-markdown` skill
+	- store outputs under docs/attachments/<TICKET-ID>/excel/
+	- extract supplementary requirements/data with `filename + sheet + row/column` references
+- If image provided:
+	- inspect with model vision or the `design-image-ocr-analysis` skill (after confirmation)
+	- extract supplementary requirements/UI details with filename references
+- If text file (`.md`, `.txt`) provided:
+	- read the file content directly
+	- store a copy under docs/attachments/<TICKET-ID>/notes/
+	- extract supplementary requirements/constraints with `filename + line/section` references
+- If DEV types text directly:
+	- capture the text verbatim as a DEV-provided note
+	- extract supplementary requirements/constraints and label the source as `DEV note`
+- If multiple sources are provided, process each source with the rules above.
+- Merge supplementary findings into the existing report:
+	- update Section 1.8 Supplementary information
+	- update affected modules, APIs, files, impact flows, and AC as needed
+	- re-save the report file at the same path
+- Re-present the updated report to DEV.
+
+Gate rule:
+- If DEV selects `No, proceed`, continue to Stage 6 with the current report unchanged.
+- If supplement is provided, always regenerate and re-present the updated report before Stage 6.
+- Never start coding from this stage.
+- If DEV does not explicitly choose an option, stop and ask again.
 
 ### Stage 6 — Request DEV confirmation
 For VSCode use vscode_askQuestions.
@@ -215,10 +264,14 @@ Verify all changes against:
 - Test decision gate completed
 
 Cross-stage installation/proxy rule:
+- Before any network or dependency-installation step (for example `curl`, `pip install`, Python API fetch), run the network preflight to load proxy/CA settings from `.env.local`:
+  ```bash
+  [ -f .env.local ] && set -a && . ./.env.local && set +a
+  ```
 - Whenever any stage requires tool/dependency installation and command output indicates proxy restriction (`407`, `proxy connect`, `tunnel connection failed`, `CERTIFICATE_VERIFY_FAILED` under corporate proxy), the agent must:
   1. Stop current automation
-  2. Ask DEV for proxy settings (`HTTP_PROXY`/`HTTPS_PROXY`, auth requirement, `NO_PROXY`, custom CA)
-  3. Retry once after DEV confirmation
+  2. Ask DEV for proxy settings (`HTTP_PROXY`/`HTTPS_PROXY`, auth requirement, `NO_PROXY`, custom CA) and confirm they are set in `.env.local`
+  3. Retry once after DEV confirmation (re-run the preflight first)
   4. If still failing, document limitation and ask whether to continue with fallback/manual alternative
 
 ### Stage 12 — Commit summary decision gate

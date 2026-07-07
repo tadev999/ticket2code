@@ -80,6 +80,14 @@ List each test category with count:
 
 ---
 
+## Attachment Evidence Coverage (if any)
+
+- Image evidence:
+	- [filename + extracted observation + transition relevance]
+- Spreadsheet evidence:
+	- [filename + sheet + row/column + transition constraint or test data rule]
+
+
 ## Key Dependencies
 
 ### Components
@@ -176,6 +184,7 @@ This test plan is organized into the following sections:
 - [ ] Test categories overview
 - [ ] AC summary (all AC listed)
 - [ ] Key dependencies
+- [ ] Attachment evidence references are included when image/spreadsheet inputs exist
 - [ ] Testing approach description
 - [ ] Coverage goals
 - [ ] Related documentation links
@@ -202,5 +211,6 @@ This test plan is organized into the following sections:
 - [ ] All AC are listed in summary
 - [ ] Categories are all represented
 - [ ] Dependencies are identified
+- [ ] Image/spreadsheet evidence is referenced when used
 - [ ] Related documentation is linked
 - [ ] Document is self-contained (reader can understand test plan from this section)

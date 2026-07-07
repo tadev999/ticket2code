@@ -46,7 +46,20 @@ Estimated Scope: <small | medium | large>
 ### 1.7 Related patterns and references
 - <review pattern or known release bug>
 
-### 1.8 Confirmation
+### 1.8 Supplementary information (DEV-provided, optional)
+- Source: <none | excel | image | text-file | dev-note | multiple>
+- Excel/CSV supplement:
+  - <filename + sheet + row/column + requirement or data derived>
+- Image supplement:
+  - <filename + what was extracted + relevance>
+- Text file supplement (.md / .txt):
+  - <filename + line/section + requirement or constraint derived>
+- DEV note (typed text):
+  - <verbatim note + requirement or constraint derived>
+- Impact on analysis:
+  - <how the supplement updates modules / APIs / files / impact flows / AC in this report>
+
+### 1.9 Confirmation
 - [ ] Yes, generate code
 - [ ] Adjust analysis
 - [ ] Add files
@@ -57,3 +70,4 @@ Rules:
 - Include at least 2 impact flows for non-trivial tickets.
 - Every flow includes trigger, function path, impact, risk.
 - Place Code fix approach between file list and impact flows.
+- If image/spreadsheet attachments are used, include explicit evidence references in 1.8.
