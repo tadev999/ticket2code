@@ -172,6 +172,8 @@ Procedure:
 - Re-present the updated report to DEV.
 
 Gate rule:
+- This gate is mandatory to ASK: always present the supplementary-input question after Stage 5 and before Stage 6. "Optional" refers to DEV's freedom to decline, not the agent's freedom to skip.
+- Never auto-skip this stage even when the report looks complete; only DEV may skip it by selecting `No, proceed`.
 - If DEV selects `No, proceed`, continue to Stage 6 with the current report unchanged.
 - If supplement is provided, always regenerate and re-present the updated report before Stage 6.
 - Never start coding from this stage.
