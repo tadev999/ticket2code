@@ -70,16 +70,35 @@ Comprehensive workflow: requirement analysis → code generation → dead code c
 **Input:** `/t2c_code PROJ-1234`
 
 **How it works:**
-1. Analyzes JIRA ticket with requirement breakdown and attachment inspection
-   - Includes image attachment inspection (with confirmation)
-2. Presents the PBI-based analysis report
-   - Then offers an optional supplementary-input step: add extra context via Excel/CSV, image, `.md`/`.txt` file, or typed text before coding
-   - Any supplement is analyzed and merged into an updated report
-3. Generates code implementation across necessary files
-4. Automatically cleans up dead code and orphaned references (with before/after evidence)
-5. Asks whether to run tests/builds now or defer
-6. Evaluates generated code against all acceptance criteria
-7. Produces final report saved to `docs/report/<TICKET-ID>_reports_<YYYYMMDDHHmm>.md`
+```text
+Stage 0    → Chọn ngôn ngữ giao tiếp                          [GATE bắt buộc]
+Stage 1    → Fetch ticket từ JIRA API
+Stage 1.5  → Thu thập nguồn design (Figma) — optional         [GATE nếu có Figma]
+Stage 2    → Parse & bóc tách nội dung ticket
+             (mô tả, AC, label, attachment, ảnh, Excel...)    [completeness gate]
+Stage 2.5  → Phân tích design (Figma/OCR) — optional
+Stage 3    → Explore codebase (module, file, API ảnh hưởng)
+Stage 4    → Sinh báo cáo phân tích (Section 1)
+Stage 5    → Lưu báo cáo: docs/report/<TICKET>_reports_<time>.md
+─────────────────────────────────────────────────────────────
+Stage 5.5  → HỎI BỔ SUNG (Excel/CSV, ảnh, .md/.txt, gõ text)  [GATE bắt buộc HỎI]
+             → nếu có: merge vào báo cáo, lưu lại, trình bày lại
+             → chỉ làm giàu báo cáo, KHÔNG sinh code
+Stage 6    → XÁC NHẬN thực hiện                               [GATE bắt buộc]
+             Options: Confirm and implement / Revise / Adjust scope / Cancel
+─────────────────────────────────────────────────────────────
+Stage 7    → Sinh code (chỉ khi đã Confirm)
+Stage 8    → Phân rã AC thành các item nguyên tử
+Stage 9    → Đánh giá code theo ma trận AC (Met/Partially/Not/Unclear)
+Stage 9.5  → Dọn dead-code (removed symbols + search evidence + lint/type-check)
+Stage 10   → Ghi kết quả đánh giá vào báo cáo (Section 2 & 3)
+Stage 10.5 → HỎI chạy test/build?                            [GATE bắt buộc]
+             Options: Yes, run now / No, defer
+             (đây là stage DUY NHẤT được chạy test/build)
+Stage 11   → Validate (coding style, logging, test rule, cleanup...)
+Stage 12   → HỎI ghi commit summary?                         [GATE bắt buộc]
+             Options: Yes → Section 4 / No → defer
+```
 
 **Output:**
 - Implementation-ready code changes
@@ -101,14 +120,24 @@ Automated review of your code changes against ticket requirements and project st
 **Input:** `/t2c_review PROJ-1234`
 
 **How it works:**
-1. Looks for existing ticket report (from `/t2c_code`) or fetches ticket from JIRA
-2. Asks you to provide commit hash (the baseline for comparison)
-3. Retrieves git diff between your commit and HEAD
-4. Analyzes changes against:
-   - Decomposed acceptance criteria
-   - Coding style guide compliance
-   - Potential regressions and edge cases
-5. Generates evidence-based review findings
+```text
+Stage 0    → Chọn ngôn ngữ giao tiếp                          [GATE bắt buộc]
+Stage 1    → Resolve báo cáo ticket
+             (dùng docs/report/<TICKET>_reports_*.md nếu có; nếu không → fetch JIRA)
+Stage 1.5  → HỎI BỔ SUNG (Excel/CSV, ảnh, .md/.txt, gõ text)  [GATE bắt buộc HỎI]
+             → làm giàu ngữ cảnh yêu cầu, dùng cho phân tích & đánh giá AC
+             → chỉ làm giàu ngữ cảnh, KHÔNG đánh giá code / ghi report
+Stage 2    → HỎI BASE commit hash (commit TRƯỚC khi sửa code) [GATE bắt buộc]
+             Options: Provide commit hash / Cancel
+Stage 3    → Lấy diff: git diff <base-commit>..HEAD
+             (parse file thay đổi, insertions/deletions, ngôn ngữ)
+Stage 4    → Phân tích code changes (map vào module/API, đối chiếu chuẩn repo)
+Stage 5    → Đánh giá theo AC (Met / Partially / Not / Unclear)
+             thứ tự kiểm tra: 1) diff → 2) codebase ngoài diff
+Stage 6    → Sinh báo cáo review + lưu:
+             docs/report/<TICKET>_reviews_<time>.md
+             (Section 1: metadata/diff · 2: AC matrix · 3: chất lượng · 4: kết luận)
+```
 
 **Output:**
 - Professional review report with line-by-line evidence
@@ -129,16 +158,28 @@ Generates comprehensive integration test cases covering component interactions a
 **Input:** `/t2c_integration_tests PROJ-1234`
 
 **How it works:**
-1. Parses ticket requirements and acceptance criteria
-2. Analyzes affected components and dependencies
-3. Presents analysis report and waits for your confirmation
-4. Generates categorized test cases:
-   - Organized by functional areas (UI, business logic, data persistence, API, etc.)
-   - With environment setup (pre-conditions, server config, test data)
-   - With step-by-step execution sequences
-   - With explicit success criteria
-5. Produces AC-to-test-case traceability matrix
-6. Validates test coverage against all acceptance criteria
+```text
+Stage 0    → Chọn ngôn ngữ giao tiếp                          [GATE bắt buộc]
+Stage 0.5  → Chọn execution phase: Pre-Dev / Post-Dev         [GATE bắt buộc]
+Stage 1    → Fetch ticket từ JIRA API
+Stage 2    → Parse & bóc tách nội dung ticket
+             (AC, module, service, ảnh, Excel...)             [completeness gate]
+Stage 3    → Phân tích yêu cầu test (map AC → điều kiện test)
+Stage 4    → Sinh báo cáo phân tích + lưu:
+             docs/test/integration/<TICKET>_integration_tests_<predev|postdev>_<time>.md
+─────────────────────────────────────────────────────────────
+Stage 4.2  → HỎI BỔ SUNG (Excel/CSV, ảnh, .md/.txt, gõ text)  [GATE bắt buộc HỎI]
+             → nếu có: merge vào báo cáo, lưu lại, trình bày lại
+             → chỉ làm giàu báo cáo, KHÔNG sinh test case
+Stage 4.5  → XÁC NHẬN                                         [GATE bắt buộc]
+             Options: Confirm and generate test cases / Revise / Cancel
+─────────────────────────────────────────────────────────────
+Stage 5    → Phân loại test cases (UI, Business Logic, API, Error...)
+Stage 6    → Thiết kế environment setup (pre-conditions, data, mock, teardown)
+Stage 7    → Sinh test sequences (từng bước: action → expected result)
+Stage 8    → Định nghĩa expected results (measurable, verifiable, complete)
+Stage 9    → Validate coverage (100% AC được cover, không orphan case)
+```
 
 **Output:**
 - Comprehensive test plan in markdown
@@ -160,16 +201,30 @@ Specialized test cases focused on screen navigation, transitions, and UI state v
 **Input:** `/t2c_screen_transition_tests PROJ-1234`
 
 **How it works:**
-1. Extracts ticket requirements and acceptance criteria
-2. Identifies screen entry/exit points and branch conditions
-3. Presents analysis report and waits for your confirmation
-4. Builds transition paths and generates test cases showing:
-   - **From Screen → To Screen** for each navigation step
-   - **Action/Trigger** that causes transition
-   - **Expected UI/System state** at destination
-   - **Pre-conditions and test data** for reproducibility
-5. Creates AC-to-TC-to-Step traceability
-6. Validates coverage of all screen transitions
+```text
+Stage 0    → Chọn ngôn ngữ giao tiếp                          [GATE bắt buộc]
+Stage 0.5  → Chọn execution phase: Pre-Dev / Post-Dev         [GATE bắt buộc]
+Stage 1    → Fetch ticket từ JIRA API
+Stage 2    → Parse & bóc tách nội dung ticket
+             (AC, màn hình, luồng UI, ảnh, Excel...)          [completeness gate]
+Stage 3    → Phân tích yêu cầu test + dựng transition edges
+             (From Screen → Action → To Screen)
+Stage 4    → Sinh báo cáo phân tích + transition map + lưu:
+             docs/test/screen-transition/<TICKET>_screen_transition_tests_<predev|postdev>_<time>.md
+─────────────────────────────────────────────────────────────
+Stage 4.2  → HỎI BỔ SUNG (Excel/CSV, ảnh, .md/.txt, gõ text)  [GATE bắt buộc HỎI]
+             → nếu có: merge vào báo cáo, lưu lại, trình bày lại
+             → chỉ làm giàu báo cáo, KHÔNG sinh test case
+Stage 4.5  → XÁC NHẬN                                         [GATE bắt buộc]
+             Options: Confirm and generate test cases / Revise / Cancel
+─────────────────────────────────────────────────────────────
+Stage 5    → Phân loại transition scenarios
+             (Critical / Alternate / Error Recovery / Back / Entry-Deeplink)
+Stage 6    → Thiết kế environment setup (pre-conditions, data, mock, teardown)
+Stage 7    → Sinh test sequences (mỗi bước: From Screen → Action → To Screen)
+Stage 8    → Định nghĩa expected results (measurable, verifiable, complete)
+Stage 9    → Validate coverage (100% AC → step traceability, không orphan case)
+```
 
 **Output:**
 - Screen transition test plan
