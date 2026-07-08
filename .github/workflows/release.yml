@@ -22,7 +22,7 @@ jobs:
           ARCHIVE="ticket2code-core-${VERSION_VALUE}.tar.gz"
           tar -czf "$ARCHIVE" \
             README.md LICENSE CHANGELOG.md VERSION \
-            docs core workflows templates installers tests examples .github
+            docs core workflows templates bin package.json .github
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
 
       - name: Upload artifact

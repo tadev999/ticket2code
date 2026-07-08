@@ -16,25 +16,14 @@ jobs:
         run: |
           test -f VERSION
           test -f README.md
-          test -f installers/install.sh
-          test -f installers/upgrade.sh
-          test -f installers/doctor.sh
+          test -f package.json
+          test -f bin/t2c.js
           test -f core/hooks/scripts/pre_tool_guard.py
 
-      - name: Validate bash scripts syntax
+      - name: Validate CLI syntax
         run: |
-          bash -n installers/install.sh
-          bash -n installers/upgrade.sh
-          bash -n installers/doctor.sh
-          bash -n installers/uninstall.sh
+          node --check bin/t2c.js
 
       - name: Validate hook python syntax
         run: |
           python3 -m py_compile core/hooks/scripts/pre_tool_guard.py
-
-      - name: Validate executable bits
-        run: |
-          test -x installers/install.sh
-          test -x installers/upgrade.sh
-          test -x installers/doctor.sh
-          test -x installers/uninstall.sh
