@@ -61,14 +61,18 @@ Requirements:
 
 Ticket2Code provides specialized slash commands in VS Code to streamline your workflow. All prompts require JIRA configuration in `.env.local`.
 
-### Setup Configuration
+### Required Configuration (.env.local)
 
-Before using any prompt, ensure `.env.local` contains:
+Create `.env.local` in your project root with JIRA connection details:
+
 ```bash
+# JIRA Connection (Required for all prompts)
 JIRA_TOKEN=<your Atlassian API token>
 JIRA_EMAIL=<your Atlassian account email>
 JIRA_URL=<your JIRA base URL>
 ```
+
+Generate JIRA API token: https://id.atlassian.com/manage-profile/security/api-tokens
 
 ### Available Prompts
 
@@ -352,19 +356,6 @@ Refer to the documentation files in the `docs/` directory or check the installat
 ---
 
 ## Environment Variables
-
-### Required Configuration (.env.local)
-
-Create `.env.local` in your project root with JIRA connection details:
-
-```bash
-# JIRA Connection (Required for all prompts)
-JIRA_TOKEN=<your Atlassian API token>
-JIRA_EMAIL=<your Atlassian account email>
-JIRA_URL=<your JIRA base URL>
-```
-
-Generate JIRA API token: https://id.atlassian.com/manage-profile/security/api-tokens
 
 ### Optional: Corporate Proxy (.env.local)
 
