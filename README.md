@@ -10,11 +10,6 @@ Ticket2Code bridges the gap between project management and development by provid
 - Reduces manual setup time and human error
 - Supports macOS, Windows, and Linux via a single npm CLI (`t2c`)
 
-## System Requirement
-- NodeJS for installing
-- Python for OCR, Excel skills
-The CLI (init/doctor/upgrade/uninstall) is Node-based; Python is only required at skill runtime (OCR, Figma, hooks).
-
 ## Directory Structure
 
 ```
