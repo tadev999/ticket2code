@@ -10,17 +10,9 @@ Ticket2Code bridges the gap between project management and development by provid
 - Reduces manual setup time and human error
 - Supports macOS, Windows, and Linux via a single npm CLI (`t2c`)
 
-## Install model (hybrid)
-
-Ticket2Code uses a hybrid install model that keeps the target project clean:
-
-- In the target project (lightweight):
-  - `.github/prompts/t2c_*.prompt.md` — Copilot slash-command entrypoints
-  - `.t2c/config.yaml`, `.t2c/lock.json`, `.t2c/state/` — project config, version pin, local state
-- At user level (heavy runtime/assets, resolved by pinned version):
-  - macOS: `~/Library/Application Support/ticket2code/{runtime,assets}/<version>/`
-  - Windows: `%LOCALAPPDATA%\ticket2code\{runtime,assets}\<version>\`
-
+## System Requirement
+- NodeJS for installing
+- Python for OCR, Excel skills
 The CLI (init/doctor/upgrade/uninstall) is Node-based; Python is only required at skill runtime (OCR, Figma, hooks).
 
 ## Directory Structure
