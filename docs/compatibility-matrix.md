@@ -3,22 +3,22 @@
 ## Runtime assumptions
 
 - Copilot customizations are loaded from target repository `.github/`.
-- A single installer CLI is used: `installers/t2c_installer.py`.
-- Installer commands are executed with Python 3 on both macOS and Windows.
+- A single installer CLI is used: `bin/t2c.js` (npm package `ticket2code`, command `t2c`).
+- Installer commands are executed with Node.js on macOS, Windows, and Linux.
 - Hook script uses Python 3.
 
 ## Minimum environment
 
-- OS: macOS or Windows
-- Shell: any shell that can run Python commands
-- Python: 3.8+
+- OS: macOS, Windows, or Linux
+- Node.js: 16.7+
+- Python: 3.8+ (skill runtime and hooks)
 - Git: 2.30+
 
 ## Project requirements
 
 - Target repository must allow `.github/` customizations.
 - Target repository must provide Jira credentials in `.env.local`.
-- Target repository should include policy docs referenced by `ticket2code.config.yaml`.
+- Target repository should include policy docs referenced by `.t2c/config.yaml`.
 
 ## Non-goals
 
