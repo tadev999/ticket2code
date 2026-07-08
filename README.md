@@ -32,8 +32,7 @@ ticket2code/
 ├── workflows/            # Workflow definitions and processors
 ├── templates/            # Project bootstrap templates
 ├── docs/                 # Documentation and guides
-├── package.json          # npm package manifest (bin: t2c)
-└── VERSION               # Version identifier
+└── package.json          # npm package manifest (bin: t2c)
 ```
 
 ---
@@ -279,6 +278,12 @@ t2c upgrade     # Refresh runtime/assets and version lock
 t2c uninstall   # Remove project-local .t2c metadata and t2c prompt entrypoints
 ```
 
+Global options:
+```bash
+t2c --version   # Print the installed t2c version (aliases: -v, version)
+t2c --help      # Print usage and available commands (alias: -h)
+```
+
 By default `uninstall` only removes project-local files and keeps the shared
 user-level runtime/assets (other projects may still use them). To also remove the
 shared user-level runtime/assets/cache/logs, add `--purge`:
@@ -286,6 +291,12 @@ shared user-level runtime/assets/cache/logs, add `--purge`:
 ```bash
 t2c uninstall --purge
 ```
+
+> Note: `--purge` and `--version` are provided by the CLI binary itself. Running
+> `t2c upgrade` only refreshes the runtime/assets — it does not update the global
+> `t2c` executable. If these flags appear to have no effect, your globally
+> installed CLI is outdated; reinstall it with `npm i -g ticket2code` (or
+> `npm i -g .` from a local checkout) and run `hash -r`.
 
 Use `--target-dir` to target another repository:
 ```bash

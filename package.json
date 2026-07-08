@@ -1,0 +1,23 @@
+{
+  "name": "ticket2code",
+  "version": "0.3.0",
+  "description": "Ticket2Code CLI: hybrid installer for GitHub Copilot ticket-to-code workflows.",
+  "bin": {
+    "t2c": "bin/t2c.js"
+  },
+  "files": [
+    "bin/",
+    "core/",
+    "workflows/",
+    "templates/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16.7.0"
+  },
+  "scripts": {
+    "t2c": "node bin/t2c.js"
+  },
+  "license": "MIT"
+}
