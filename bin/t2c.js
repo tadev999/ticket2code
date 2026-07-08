@@ -219,10 +219,7 @@ function initCommand(target) {
   console.log("Next steps:");
   console.log(`1) Edit ${configPath}`);
   console.log(`2) Create ${path.join(target, ".env.local")} from .env.local.example`);
-  console.log(`3) Runtime path: ${runtimeDir(version)}`);
-  console.log(`4) Assets path: ${assetsDir(version)}`);
-  console.log(`5) Entrypoint prompts path: ${path.join(target, ".github", "prompts")}`);
-  console.log(`6) Run: t2c doctor --target-dir ${target}`);
+  console.log(`3) Run: t2c doctor --target-dir ${target}`);
   return 0;
 }
 
