@@ -18,7 +18,8 @@ function repoRoot() {
 }
 
 function readVersion() {
-  return fs.readFileSync(path.join(repoRoot(), "VERSION"), "utf8").trim();
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot(), "package.json"), "utf8"));
+  return String(pkg.version).trim();
 }
 
 function ensureTargetDir(target) {
@@ -383,6 +384,8 @@ function printHelp() {
   console.log("Options:");
   console.log("  --target-dir <path>   Target project directory (defaults to current directory).");
   console.log("  --purge               With uninstall, also remove shared user-level runtime/assets/cache/logs.");
+  console.log("  -v, --version         Print the ticket2code version and exit.");
+  console.log("  -h, --help            Print this help message and exit.");
 }
 
 function main() {
@@ -390,6 +393,11 @@ function main() {
 
   if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help") {
     printHelp();
+    return 0;
+  }
+
+  if (argv[0] === "-v" || argv[0] === "--version" || argv[0] === "version") {
+    console.log(readVersion());
     return 0;
   }
 
