@@ -8,17 +8,31 @@ Ticket2Code bridges the gap between project management and development by provid
 - Automatically generates code structure from JIRA tickets
 - Maintains consistent project standards across multiple repositories
 - Reduces manual setup time and human error
-- Supports both macOS and Windows with one Python installer script
+- Supports macOS, Windows, and Linux via a single npm CLI (`t2c`)
+
+## Install model (hybrid)
+
+Ticket2Code uses a hybrid install model that keeps the target project clean:
+
+- In the target project (lightweight):
+  - `.github/prompts/t2c_*.prompt.md` — Copilot slash-command entrypoints
+  - `.t2c/config.yaml`, `.t2c/lock.json`, `.t2c/state/` — project config, version pin, local state
+- At user level (heavy runtime/assets, resolved by pinned version):
+  - macOS: `~/Library/Application Support/ticket2code/{runtime,assets}/<version>/`
+  - Windows: `%LOCALAPPDATA%\ticket2code\{runtime,assets}\<version>\`
+
+The CLI (init/doctor/upgrade/uninstall) is Node-based; Python is only required at skill runtime (OCR, Figma, hooks).
 
 ## Directory Structure
 
 ```
 ticket2code/
+├── bin/                   # npm CLI (t2c) entrypoint
 ├── core/                  # Runtime assets (prompts, skills, hooks)
 ├── workflows/            # Workflow definitions and processors
 ├── templates/            # Project bootstrap templates
-├── installers/           # Installation, upgrade, and diagnostic scripts
 ├── docs/                 # Documentation and guides
+├── package.json          # npm package manifest (bin: t2c)
 └── VERSION               # Version identifier
 ```
 
@@ -26,25 +40,29 @@ ticket2code/
 
 ## Quick Start
 
-### Installation (Recommended Method)
+### Installation
 
-The safest approach uses a temporary directory and automatically cleans up after installation.
+Install the `t2c` CLI once, then initialize it inside any target project.
 
-**macOS / Linux (bash):**
 ```bash
-TMP_DIR="$(mktemp -d)" && \
-git clone --depth 1 https://github.com/tadev999/ticket2code.git "$TMP_DIR" && \
-python3 "$TMP_DIR"/installers/t2c_installer.py install --target-dir . && \
-rm -rf "$TMP_DIR"
+# 1. Install the CLI globally (once per machine)
+npm i -g ticket2code
+
+# 2. Initialize inside a target project
+cd /path/to/target-repo
+t2c init
+t2c doctor
 ```
 
-**Windows (Command Prompt):**
-```bat
-set TMP_DIR=%TEMP%\ticket2code-tmp
-git clone --depth 1 https://github.com/tadev999/ticket2code.git %TMP_DIR%
-py "%TMP_DIR%\installers\t2c_installer.py" install --target-dir "C:\path\to\target-repo"
-rmdir /s /q %TMP_DIR%
+Prefer not to install globally? Use `npx`:
+```bash
+npx ticket2code init
+npx ticket2code doctor
 ```
+
+Requirements:
+- Node.js >= 16.7 (CLI uses `fs.cpSync`).
+- Python 3 available in PATH for skill runtime (OCR, Figma, hooks).
 
 ---
 
@@ -250,49 +268,35 @@ Stage 9    → Validate coverage (100% AC → step traceability, không orphan c
 
 ---
 
-## Manual Installation
+## CLI Commands
 
-If you prefer manual setup or encounter issues with automated installation:
-
-### Step-by-Step Setup
-
-1. **Run installer**
-   ```bash
-   python3 ./installers/t2c_installer.py install --target-dir /absolute/path/to/target-repo
-   ```
-
-2. **Configure the project**
-   - Edit `ticket2code.config.yaml` in your target repository
-   - Create `.env.local` from `.env.local.example`
-   - Add required JIRA credentials
-
-3. **Validate setup**
-   ```bash
-   python3 ./installers/t2c_installer.py doctor --target-dir /absolute/path/to/target-repo
-   ```
-
-### Upgrade
-
-To update Ticket2Code to the latest version:
+The `t2c` CLI runs against a target project directory (defaults to the current directory).
 
 ```bash
-python3 ./installers/t2c_installer.py upgrade --target-dir /absolute/path/to/target-repo
+t2c init        # Install hybrid runtime into the target project (alias: install)
+t2c doctor      # Validate project + user-level assets + Python runtime
+t2c upgrade     # Refresh runtime/assets and version lock
+t2c uninstall   # Remove project-local .t2c metadata and t2c prompt entrypoints
 ```
 
-### Uninstall
-
-To remove Ticket2Code from your repository:
+By default `uninstall` only removes project-local files and keeps the shared
+user-level runtime/assets (other projects may still use them). To also remove the
+shared user-level runtime/assets/cache/logs, add `--purge`:
 
 ```bash
-# Using one-liner (recommended):
-TMP_DIR="$(mktemp -d)" && \
-git clone --depth 1 https://github.com/tadev999/ticket2code.git "$TMP_DIR" && \
-python3 "$TMP_DIR"/installers/t2c_installer.py uninstall --target-dir . && \
-rm -rf "$TMP_DIR"
-
-# Or manually:
-python3 ./installers/t2c_installer.py uninstall --target-dir /absolute/path/to/target-repo
+t2c uninstall --purge
 ```
+
+Use `--target-dir` to target another repository:
+```bash
+t2c init --target-dir /absolute/path/to/target-repo
+t2c doctor --target-dir /absolute/path/to/target-repo
+```
+
+After `t2c init`:
+1. Edit `.t2c/config.yaml` in the target repository.
+2. Create `.env.local` from `.env.local.example` and add JIRA credentials.
+3. Run `t2c doctor` to validate.
 
 ---
 
@@ -319,18 +323,23 @@ Comprehensive guides are available in the `docs/` directory:
 
 ### Common Issues
 
-**Installation fails:**
-- Ensure Python 3 is available in PATH.
-- Use `python` instead of `python3` on systems where `python3` is not mapped.
-- On Windows, run commands from PowerShell and pass absolute paths with `--target-dir`.
+**npm install / CLI issues:**
+- Ensure Node.js >= 16.7 (`node -v`); older versions lack `fs.cpSync`.
+- `command not found: t2c` after global install — the npm global bin is not on PATH. Run `npm config get prefix` and add its `bin` (macOS/Linux) or the prefix folder (Windows `%APPDATA%\npm`) to PATH.
+- Permission error on global install — set a user-level prefix instead of using sudo/admin (e.g. `npm config set prefix "$HOME/.npm-global"`), then reinstall.
+
+**Windows-specific:**
+- If PowerShell blocks scripts (ExecutionPolicy), run via `cmd.exe` or use `npx ticket2code ...`, or allow user scripts: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+- Global installs use `%APPDATA%\npm` and normally do not require admin.
 
 **Doctor check reports warnings:**
+- `WARN python runtime not found` — install Python 3 (required at skill runtime, not for the CLI).
 - Run `doctor` again to see detailed diagnostic output
 - Check `.env.local` configuration is complete
 - Verify JIRA credentials are correct
 
 **Configuration not being recognized:**
-- Ensure `ticket2code.config.yaml` is in the repository root
+- Ensure `.t2c/config.yaml` exists in the repository root
 - Check file formatting and YAML syntax
 
 ### Need Help?
@@ -369,7 +378,7 @@ NO_PROXY="localhost,127.0.0.1,.company.local"
 #CURL_CA_BUNDLE="/absolute/path/to/corp-ca.pem"
 ```
 
-For detailed setup, see `ticket2code/SETUP.md`.
+For detailed setup, see `docs/install.md`.
 
 ---
 

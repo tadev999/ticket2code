@@ -1,6 +1,6 @@
 # Ticket2Code Setup
 
-This document is installed to `ticket2code/SETUP.md` in your target repository.
+This document is available in user-level Ticket2Code assets for your installed version.
 
 ## 1) Create `.env.local`
 
@@ -30,14 +30,14 @@ Notes:
 
 ## 2) Configure project settings
 
-Open `ticket2code.config.yaml` and update values for your repository and workflow conventions.
+Open `.t2c/config.yaml` and update values for your repository and workflow conventions.
 
 ## 3) Run doctor check
 
-From this framework repository:
+From the target repository:
 
 ```bash
-python3 ./installers/t2c_installer.py doctor --target-dir /absolute/path/to/target-repo
+t2c doctor --target-dir /absolute/path/to/target-repo
 ```
 
 ## 4) Use slash commands
@@ -50,4 +50,4 @@ Examples:
 
 ## Troubleshooting
 
-If a command reports missing files under `ticket2code/...`, rerun install or upgrade to refresh runtime assets.
+If a command reports missing files under `.t2c/...` or your user-level runtime/assets path, rerun install or upgrade to refresh runtime assets.
